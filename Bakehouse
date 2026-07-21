@@ -1,0 +1,33 @@
+Bakehouse
+
+
+curl -s http://localhost:3000/api/products?featured=1 | head -c 500
+
+curl -s http://localhost:3000/api/categories
+
+
+curl -s http://localhost:3000/api/orders/1
+
+
+
+
+
+  
+
+Read [](file:///Users/purnendu/bakehouse/package.json)
+
+Read [](file:///Users/purnendu/bakehouse/server.js#1-1), lines 1 to 50
+
+Install dependencies and start the server:
+
+```bash
+cd /Users/purnendu/bakehouse
+npm install
+npm run dev
+```
+
+Then open **http://localhost:3000** in your browser to see the homepage.
+
+`npm run dev` starts the server with `--watch` so it auto-restarts on file changes. The database will be auto-created and seeded on first run if it doesn't exist.
+
+

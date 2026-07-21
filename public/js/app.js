@@ -56,8 +56,8 @@ function productCardHTML(product) {
                 <h3><a href="/product.html?id=${product.id}">${escapeHTML(product.name)}</a></h3>
                 <p class="product-card-desc">${escapeHTML(truncate(product.description, 80))}</p>
                 <div class="product-card-footer">
-                    <span class="product-price">$${product.price.toFixed(2)}</span>
-                    <button class="btn btn-primary btn-sm" onclick="addToCart(${product.id}, '${escapeAttr(product.name)}', ${product.price})">Add to Cart</button>
+                    <span class="product-price">$${parseFloat(product.price).toFixed(2)}</span>
+                    <button class="btn btn-primary btn-sm" onclick="addToCart(${product.id}, '${escapeAttr(product.name)}', ${parseFloat(product.price)})">Add to Cart</button>
                 </div>
             </div>
         </div>

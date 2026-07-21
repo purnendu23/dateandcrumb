@@ -1,5 +1,6 @@
 /* Cart page — shows full cart with quantities, remove, total */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await Cart._ready;
     renderCart();
 });
 

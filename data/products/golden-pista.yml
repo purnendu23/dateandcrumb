@@ -1,0 +1,29 @@
+name: Golden Pista
+description: >
+  A premium pistachio bar crafted with wholesome natural ingredients
+  and a touch of golden honey.
+price: 4.50
+category: Healthy Bars
+featured: true
+
+images:
+  - /images/golden-pista/front_picture.png
+  - /images/golden-pista/nakpic_1.png
+  - /images/golden-pista/ingredients_picture.png
+  - /images/golden-pista/nutrition.png
+
+ingredients: >
+  Pistachios, Dates, Oats, Honey, Coconut Oil, Cardamom, Sea Salt
+
+nutritional_info: |
+  Serving Size: 1 bar (40g)
+  Calories: 180
+  Total Fat: 9g
+  Saturated Fat: 3g
+  Cholesterol: 0mg
+  Sodium: 45mg
+  Total Carbohydrates: 22g
+  Dietary Fiber: 3g
+  Total Sugars: 12g
+  Protein: 5g
+

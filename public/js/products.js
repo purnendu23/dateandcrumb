@@ -17,6 +17,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let activeProduct = products[0];
+
+    // Pre-select flavor from URL query param
+    const urlParams = new URLSearchParams(window.location.search);
+    const flavorParam = urlParams.get('flavor');
+    if (flavorParam) {
+        const match = products.find(p => p.name.toLowerCase() === flavorParam.toLowerCase());
+        if (match) activeProduct = match;
+    }
+
     let activeImages = parseImages(activeProduct);
     let activeImgIndex = 0;
 
@@ -28,8 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeImages = parseImages(activeProduct);
         activeImgIndex = 0;
 
-        const stockClass = activeProduct.stock > 5 ? 'stock-ok' : 'stock-low';
-        const stockText = activeProduct.stock > 0 ? `${activeProduct.stock} in stock` : 'Out of stock';
 
         // Flavor pills
         const flavorsHTML = products.map((p, i) =>
@@ -68,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="showcase-info">
                 <div class="product-detail-category">${esc(activeProduct.category_name || '')}</div>
                 <h1>${esc(activeProduct.name)}</h1>
-                <div class="product-detail-price">$${activeProduct.price.toFixed(2)}</div>
+                <div class="product-detail-price">$${parseFloat(activeProduct.price).toFixed(2)}</div>
 
                 <p class="product-detail-desc">${esc(activeProduct.description || '')}</p>
 
@@ -77,13 +84,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="flavor-pills">${flavorsHTML}</div>
                 </div>
 
-                <p class="product-detail-stock ${stockClass}">${stockText}</p>
 
-                ${activeProduct.stock > 0 ? `
+                ${!activeProduct.out_of_stock ? `
                 <div class="showcase-actions">
                     <div class="quantity-selector">
                         <label for="qty">Qty:</label>
-                        <input type="number" id="qty" value="1" min="1" max="${activeProduct.stock}">
+                        <input type="number" id="qty" value="1" min="1">
                     </div>
                     <button class="btn btn-primary btn-lg" id="add-to-cart-btn">Add to Cart</button>
                 </div>
@@ -126,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (addBtn) {
             addBtn.addEventListener('click', () => {
                 const qty = parseInt(document.getElementById('qty').value, 10) || 1;
-                Cart.addItem({ id: activeProduct.id, name: activeProduct.name, price: activeProduct.price }, qty);
+                Cart.addItem({ id: activeProduct.id, name: activeProduct.name, price: parseFloat(activeProduct.price) }, qty);
                 showToast(`${activeProduct.name} added to cart!`);
             });
         }
@@ -137,6 +143,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btn.parentElement.classList.toggle('open');
             });
         });
+
+        // Lightbox on main image click
+        const mainImgWrap = showcase.querySelector('.main-img-wrap');
+        if (mainImgWrap) {
+            mainImgWrap.addEventListener('click', () => {
+                openLightbox(activeImages[activeImgIndex], activeProduct.name);
+            });
+        }
     }
 
     // Initial render
@@ -162,4 +176,38 @@ function showToast(message) {
     toast.style.opacity = '1';
     clearTimeout(toast._timeout);
     toast._timeout = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+}
+
+function openLightbox(src, alt) {
+    const existing = document.getElementById('lightbox-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'lightbox-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.cssText = 'position:absolute;top:1rem;right:1.5rem;background:none;border:none;color:#fff;font-size:2.5rem;cursor:pointer;line-height:1;z-index:10000;';
+    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); overlay.remove(); });
+
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = alt || '';
+    img.style.cssText = 'max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;';
+
+    overlay.appendChild(closeBtn);
+    overlay.appendChild(img);
+    overlay.addEventListener('click', () => overlay.remove());
+    img.addEventListener('click', (e) => e.stopPropagation());
+
+    document.body.appendChild(overlay);
+
+    function onKey(e) {
+        if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', onKey);
+        }
+    }
+    document.addEventListener('keydown', onKey);
 }

@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bakehouse Admin</title>
+        <link rel="icon" type="image/png" href="/images/logo/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/images/logo/favicon.svg" />
+    <link rel="shortcut icon" href="/images/logo/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/logo/apple-touch-icon.png" />
+    <link rel="manifest" href="/images/logo/site.webmanifest" />
     <link rel="stylesheet" href="/css/style.css">
     <style>
         :root {
@@ -89,6 +94,7 @@
             <ul class="nav-links">
                 <li><a href="/">Home</a></li>
                 <li><a href="/products.html">Products</a></li>
+                <li><a href="/our-story.html">Our Story</a></li>
                 <li><a href="/cart.html" class="cart-link">Cart</a></li>
                 <li><a href="/admin/" class="active">Admin</a></li>
                 <li id="auth-nav"></li>
@@ -161,7 +167,7 @@
             document.getElementById('stats').innerHTML = `
                 <div class="stat-card"><div class="label">Total Orders</div><div class="value">${s.totalOrders}</div></div>
                 <div class="stat-card"><div class="label">Pending Orders</div><div class="value">${s.pendingOrders}</div></div>
-                <div class="stat-card"><div class="label">Revenue</div><div class="value">$${s.totalRevenue.toFixed(2)}</div></div>
+                <div class="stat-card"><div class="label">Revenue</div><div class="value">$${parseFloat(s.totalRevenue).toFixed(2)}</div></div>
                 <div class="stat-card"><div class="label">Users</div><div class="value">${s.totalUsers}</div></div>
             `;
         }
@@ -189,7 +195,7 @@
                         <td>${o.customer_phone ? esc(o.customer_phone) : '—'}</td>
                         <td>${esc(o.shipping_address)}, ${esc(o.shipping_city)} ${esc(o.shipping_zip)}</td>
                         <td class="order-items">${o.items.map(i => `<span>${esc(i.name)} × ${i.quantity}</span>`).join('')}</td>
-                        <td><strong>$${o.total.toFixed(2)}</strong></td>
+                        <td><strong>$${parseFloat(o.total).toFixed(2)}</strong></td>
                         <td><span class="status-badge status-${o.status}">${statusLabel}</span></td>
                         <td>${o.tracking_number ? esc(o.tracking_number) : '—'}</td>
                         <td>${o.carrier ? esc(o.carrier) : '—'}</td>
@@ -325,14 +331,14 @@
             const panel = document.getElementById('panel-products');
 
             panel.innerHTML = `<table>
-                <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Featured</th></tr></thead>
+                <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Out of Stock</th><th>Featured</th></tr></thead>
                 <tbody>${products.map(p => `
                     <tr>
                         <td>${p.id}</td>
                         <td>${esc(p.name)}</td>
                         <td>${esc(p.category_name || '—')}</td>
-                        <td>$${p.price.toFixed(2)}</td>
-                        <td>${p.stock}</td>
+                        <td>$${parseFloat(p.price).toFixed(2)}</td>
+                        <td><button class="edit-btn" onclick="toggleOutOfStock(${p.id}, ${p.out_of_stock ? 0 : 1})">${p.out_of_stock ? '❌ Yes' : '✅ No'}</button></td>
                         <td>${p.featured ? '⭐' : '—'}</td>
                     </tr>
                 `).join('')}</tbody>
@@ -344,6 +350,19 @@
         loadOrders();
         loadUsers();
         loadProducts();
+
+        async function toggleOutOfStock(productId, newValue) {
+            try {
+                const res = await fetch('/api/admin/products/' + productId + '/out-of-stock', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ out_of_stock: newValue }),
+                });
+                if (res.ok) loadProducts();
+            } catch (err) {
+                alert('Failed to update product.');
+            }
+        }
     </script>
     <script src="/js/auth-nav.js"></script>
 </body>

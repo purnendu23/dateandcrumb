@@ -60,12 +60,12 @@ router.post('/stripe/create-intent', async (req, res) => {
     }
 
     // Calculate total from DB prices (never trust client-side amounts)
-    const getProduct = db.prepare('SELECT id, price, stock FROM products WHERE id = ?');
     let total = 0;
     for (const item of items) {
-        const product = getProduct.get(parseInt(item.product_id, 10));
+        const [rows] = await db.execute('SELECT id, price, out_of_stock FROM products WHERE id = ?', [parseInt(item.product_id, 10)]);
+        const product = rows[0];
         if (!product) return res.status(400).json({ error: `Product ${item.product_id} not found.` });
-        if (product.stock < item.quantity) return res.status(400).json({ error: `Insufficient stock for product ${item.product_id}.` });
+        if (product.out_of_stock) return res.status(400).json({ error: `Product ${item.product_id} is currently out of stock.` });
         total += product.price * item.quantity;
     }
 
@@ -98,13 +98,13 @@ router.post('/paypal/create-order', async (req, res) => {
         return res.status(400).json({ error: 'Cart items are required.' });
     }
 
-    const getProduct = db.prepare('SELECT id, price, stock, name FROM products WHERE id = ?');
     let total = 0;
     const lineItems = [];
     for (const item of items) {
-        const product = getProduct.get(parseInt(item.product_id, 10));
+        const [rows] = await db.execute('SELECT id, price, out_of_stock, name FROM products WHERE id = ?', [parseInt(item.product_id, 10)]);
+        const product = rows[0];
         if (!product) return res.status(400).json({ error: `Product ${item.product_id} not found.` });
-        if (product.stock < item.quantity) return res.status(400).json({ error: `Insufficient stock for product ${item.product_id}.` });
+        if (product.out_of_stock) return res.status(400).json({ error: `Product ${item.product_id} is currently out of stock.` });
         const lineTotal = product.price * item.quantity;
         total += lineTotal;
         lineItems.push({

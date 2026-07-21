@@ -1,83 +1,112 @@
-const Database = require('better-sqlite3');
+const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
+const dotenv = require('dotenv');
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+dotenv.config({ path: path.join(__dirname, '..', envFile) });
 
-const dbPath = path.join(__dirname, 'bakehouse.db');
-const db = new Database(dbPath);
+async function seed() {
+    const pool = mysql.createPool({
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT, 10) || 3306,
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || 'bakehouse',
+        waitForConnections: true,
+        connectionLimit: 5,
+        multipleStatements: true,
+    });
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+    const conn = await pool.getConnection();
 
-// Run schema
-const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+    try {
+        // Preserve admin users before dropping tables
+        let adminUsers = [];
+        try {
+            const [admins] = await conn.execute('SELECT * FROM users WHERE is_admin = 1');
+            adminUsers = admins;
+        } catch (e) {
+            // users table may not exist yet
+        }
 
-// Preserve admin users before dropping tables
-const adminUsers = [];
-try {
-    const admins = db.prepare('SELECT * FROM users WHERE is_admin = 1').all();
-    adminUsers.push(...admins);
-} catch (e) {
-    // users table may not exist yet
-}
+        // Drop existing tables and recreate
+        await conn.query(`
+            SET FOREIGN_KEY_CHECKS = 0;
+            DROP TABLE IF EXISTS validated_addresses;
+            DROP TABLE IF EXISTS address_book;
+            DROP TABLE IF EXISTS order_items;
+            DROP TABLE IF EXISTS orders;
+            DROP TABLE IF EXISTS products;
+            DROP TABLE IF EXISTS categories;
+            DROP TABLE IF EXISTS sessions;
+            DROP TABLE IF EXISTS users;
+            SET FOREIGN_KEY_CHECKS = 1;
+        `);
 
-// Drop existing tables and recreate
-db.exec(`
-    DROP TABLE IF EXISTS order_items;
-    DROP TABLE IF EXISTS orders;
-    DROP TABLE IF EXISTS products;
-    DROP TABLE IF EXISTS categories;
-    DROP TABLE IF EXISTS sessions;
-    DROP TABLE IF EXISTS users;
-`);
-db.exec(schema);
+        // Run schema
+        const schema = fs.readFileSync(path.join(__dirname, 'schema-mysql.sql'), 'utf8');
+        // Split by semicolons and execute each statement
+        const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
+        for (const stmt of statements) {
+            await conn.execute(stmt);
+        }
 
-// Restore admin users
-if (adminUsers.length > 0) {
-    const restoreUser = db.prepare(
-        'INSERT INTO users (id, email, password_hash, name, provider, provider_id, verified, verification_token, reset_token, reset_token_expires, is_admin, phone, organization, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    );
-    for (const u of adminUsers) {
-        restoreUser.run(u.id, u.email, u.password_hash, u.name, u.provider, u.provider_id, u.verified, u.verification_token, u.reset_token || null, u.reset_token_expires || null, u.is_admin, u.phone, u.organization, u.shipping_address, u.shipping_address2, u.shipping_city, u.shipping_state, u.shipping_zip, u.created_at);
+        // Restore admin users
+        if (adminUsers.length > 0) {
+            for (const u of adminUsers) {
+                await conn.execute(
+                    `INSERT INTO users (id, email, password_hash, name, provider, provider_id, verified, verification_token, reset_token, reset_token_expires, is_admin, phone, organization, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [u.id, u.email, u.password_hash, u.name, u.provider, u.provider_id, u.verified, u.verification_token, u.reset_token || null, u.reset_token_expires || null, u.is_admin, u.phone, u.organization, u.shipping_address, u.shipping_address2, u.shipping_city, u.shipping_state, u.shipping_zip, u.created_at]
+                );
+            }
+            console.log(`  - ${adminUsers.length} admin user(s) preserved`);
+        }
+
+        // Seed categories
+        const categories = [
+            ['Healthy Bars', 'Wholesome, nutritious bars baked with natural ingredients'],
+        ];
+        for (const [name, desc] of categories) {
+            await conn.execute('INSERT IGNORE INTO categories (name, description) VALUES (?, ?)', [name, desc]);
+        }
+
+        // Seed products from YAML files
+        const dataDir = path.join(__dirname, '..', 'data', 'products');
+        const ymlFiles = fs.readdirSync(dataDir).filter(f => f.endsWith('.yml')).sort();
+        const products = ymlFiles.map(f => {
+            const content = fs.readFileSync(path.join(dataDir, f), 'utf8');
+            return yaml.load(content);
+        });
+
+        for (const p of products) {
+            await conn.execute(
+                'INSERT IGNORE INTO products (name, description, price, image_url, category_id, out_of_stock, featured, ingredients, nutritional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                    p.name,
+                    p.description.trim(),
+                    p.price,
+                    JSON.stringify(p.images),
+                    1,
+                    0,
+                    p.featured ? 1 : 0,
+                    p.ingredients.trim(),
+                    p.nutritional_info.trim()
+                ]
+            );
+        }
+
+        console.log('Database seeded successfully!');
+        console.log(`  - ${categories.length} categories`);
+        console.log(`  - ${products.length} products`);
+    } finally {
+        conn.release();
+        await pool.end();
     }
-    console.log(`  - ${adminUsers.length} admin user(s) preserved`);
 }
 
-// Seed categories
-const insertCategory = db.prepare('INSERT OR IGNORE INTO categories (name, description) VALUES (?, ?)');
-const categories = [
-    ['Healthy Bars', 'Wholesome, nutritious bars baked with natural ingredients'],
-    ['Coffee Cakes', 'Tender coffee cakes perfect with your morning brew'],
-];
-for (const [name, desc] of categories) {
-    insertCategory.run(name, desc);
-}
-
-// Seed products
-const insertProduct = db.prepare(
-    'INSERT OR IGNORE INTO products (name, description, price, image_url, category_id, stock, featured, ingredients, nutritional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-);
-
-const products = [
-    
-    // Healthy Bars (category 1)
-    ['Golden Pista', 'A premium pistachio bar crafted with wholesome natural ingredients.', 4.50, JSON.stringify(['/images/golden-pista/front_picture.jpg', '/images/golden-pista/nakpic_1.jpg', '/images/golden-pista/nakpic_2.jpg', '/images/golden-pista/ingredients_picture.jpg']), 1, 50, 1,
-        'Pistachios, Dates, Oats, Honey, Coconut Oil, Cardamom, Sea Salt',
-        'Serving Size: 1 bar (40g)\nCalories: 180\nTotal Fat: 9g\nSaturated Fat: 3g\nCholesterol: 0mg\nSodium: 45mg\nTotal Carbohydrates: 22g\nDietary Fiber: 3g\nTotal Sugars: 12g\nProtein: 5g'],
-    ['EnergyBite', 'A power-packed energy bar to fuel your day.', 3.0, JSON.stringify(['/images/energybite/front_picture.jpg', '/images/energybite/nakpic_1.jpg', '/images/energybite/nakpic_2.jpg', '/images/energybite/ingredients_picture.jpg']), 1, 60, 1,
-        'Rolled Oats, Peanut Butter, Dark Chocolate Chips, Honey, Chia Seeds, Flaxseed, Vanilla Extract',
-        'Serving Size: 1 bar (35g)\nCalories: 160\nTotal Fat: 7g\nSaturated Fat: 2g\nCholesterol: 0mg\nSodium: 35mg\nTotal Carbohydrates: 20g\nDietary Fiber: 4g\nTotal Sugars: 9g\nProtein: 6g'],
-
-    // Coffee Cakes (category 2)
-    ['Orange Kiss Almond Cake', 'A delightful almond cake with a hint of fresh orange zest.', 22.00, JSON.stringify(['/images/orange-kiss-almond-cake/front_picture.jpg', '/images/orange-kiss-almond-cake/nakpic_1.jpg', '/images/orange-kiss-almond-cake/nakpic_2.jpg', '/images/orange-kiss-almond-cake/ingredients_picture.jpg']), 2, 15, 1,
-        'Almond Flour, Butter, Sugar, Eggs, Fresh Orange Zest, Orange Juice, Vanilla Extract, Baking Powder, Sea Salt',
-        'Serving Size: 1 slice (85g)\nCalories: 280\nTotal Fat: 16g\nSaturated Fat: 6g\nCholesterol: 55mg\nSodium: 120mg\nTotal Carbohydrates: 30g\nDietary Fiber: 2g\nTotal Sugars: 18g\nProtein: 6g'],
-];
-
-for (const p of products) {
-    insertProduct.run(...p);
-}
-
-console.log('Database seeded successfully!');
-console.log(`  - ${categories.length} categories`);
-console.log(`  - ${products.length} products`);
-db.close();
+seed().catch(err => {
+    console.error('Seed failed:', err);
+    process.exit(1);
+});

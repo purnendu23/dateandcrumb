@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS products (
     price REAL NOT NULL,
     image_url TEXT,
     category_id INTEGER,
-    stock INTEGER NOT NULL DEFAULT 0,
+    out_of_stock INTEGER NOT NULL DEFAULT 0,
     featured INTEGER NOT NULL DEFAULT 0,
     ingredients TEXT,
     nutritional_info TEXT,
@@ -78,4 +78,38 @@ CREATE TABLE IF NOT EXISTS sessions (
     sid TEXT PRIMARY KEY,
     sess TEXT NOT NULL,
     expired_at TEXT NOT NULL
+);
+
+-- Address Book
+CREATE TABLE IF NOT EXISTS address_book (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    label TEXT,
+    name TEXT,
+    phone TEXT,
+    address TEXT NOT NULL,
+    address2 TEXT,
+    city TEXT NOT NULL,
+    state TEXT,
+    zip TEXT NOT NULL,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Validated Addresses (cache for address validation API results)
+CREATE TABLE IF NOT EXISTS validated_addresses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    address_hash TEXT NOT NULL UNIQUE,
+    raw_address TEXT NOT NULL,
+    raw_city TEXT NOT NULL,
+    raw_state TEXT,
+    raw_zip TEXT NOT NULL,
+    validated_address TEXT,
+    validated_city TEXT,
+    validated_state TEXT,
+    validated_zip TEXT,
+    provider TEXT,
+    confidence TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

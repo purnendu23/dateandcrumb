@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkout — Bakehouse</title>
+        <link rel="icon" type="image/png" href="/images/logo/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/images/logo/favicon.svg" />
+    <link rel="shortcut icon" href="/images/logo/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/logo/apple-touch-icon.png" />
+    <link rel="manifest" href="/images/logo/site.webmanifest" />
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://js.stripe.com/v3/"></script>
 </head>
@@ -14,6 +19,7 @@
             <ul class="nav-links">
                 <li><a href="/">Home</a></li>
                 <li><a href="/products.html">Products</a></li>
+                <li><a href="/our-story.html">Our Story</a></li>
                 <li><a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="badge">0</span></a></li>
                 <li id="auth-nav"></li>
             </ul>
@@ -40,10 +46,10 @@
                         <div class="checkout-step" id="step-shipping">
                             <h2>Shipping Information</h2>
                             <div id="use-profile-wrapper" class="form-group" style="display:none;">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="use-profile-info">
-                                    Use shipping info from my profile
-                                </label>
+                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+                                    <button type="button" id="btn-use-profile" class="btn btn-outline btn-sm">Use shipping info from my profile</button>
+                                    <button type="button" id="btn-address-book" class="btn btn-outline btn-sm">📖 My Address Book</button>
+                                </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
@@ -212,6 +218,19 @@
                 </div>
             </div>
         </section>
+
+        <!-- Address Book Modal -->
+        <div id="address-book-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center;">
+            <div style="background:#fff; border-radius:10px; padding:1.75rem; width:100%; max-width:500px; max-height:80vh; overflow-y:auto; box-shadow:0 8px 30px rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h3 style="margin:0; color:var(--color-primary);">📖 My Address Book</h3>
+                    <button type="button" id="close-address-book" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666;">&times;</button>
+                </div>
+                <div id="address-book-list">
+                    <p style="color:var(--color-text-light);">Loading...</p>
+                </div>
+            </div>
+        </div>
     </main>
 
     <footer>
@@ -222,6 +241,7 @@
 
     <script src="/js/cart.js"></script>
     <script src="/js/auth-nav.js"></script>
+    <script src="/js/address-autocomplete.js"></script>
     <script src="/js/checkout.js"></script>
 </body>
 </html>

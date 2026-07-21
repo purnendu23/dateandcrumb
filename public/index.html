@@ -4,15 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bakehouse — Fresh Baked, Delivered</title>
+    <link rel="icon" type="image/png" href="/images/logo/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/images/logo/favicon.svg" />
+    <link rel="shortcut icon" href="/images/logo/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/logo/apple-touch-icon.png" />
+    <link rel="manifest" href="/images/logo/site.webmanifest" />
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <header>
         <nav class="navbar navbar-centered">
-            <a href="/" class="logo"><img src="/images/logo/bakehouse_logo.jpg" alt="Bakehouse"></a>
+            <a href="/" class="logo"><img src="/images/logo/dc_flat_logo_2.svg" alt="Bakehouse"></a>
             <ul class="nav-links">
                 <li><a href="/">Home</a></li>
                 <li><a href="/products.html">Products</a></li>
+                <li><a href="/our-story.html">Our Story</a></li>
                 <li><a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="badge">0</span></a></li>
                 <li id="auth-nav"></li>
             </ul>
@@ -20,54 +26,87 @@
     </header>
 
     <main>
-        <!-- Featured Products -->
-        <section class="section">
-            <div class="container">
-                <h3 class="subsection-title">Healthy Bars</h3>
-                <div id="healthy-bars-products" class="product-grid">
-                    <!-- Filled by JS -->
+        <!-- Hero Poster -->
+        <section class="hero-poster">
+            <div class="container hero-poster-inner">
+                <div class="hero-poster-left">
+                    <h1>Wholesome Snack Bars,<br>Made with Love</h1>
+                    <p>Handcrafted with premium ingredients. No preservatives. Just pure goodness in every bite.</p>
+                    <a href="/products.html" class="btn btn-primary btn-lg">Shop Snack Bars</a>
                 </div>
-
-                <h3 class="subsection-title" style="margin-top: 6rem;">Coffee Cakes</h3>
-                <div id="coffee-cakes-products" class="product-grid">
-                    <!-- Filled by JS -->
-                </div>
-
-                <div class="text-center" style="margin-top: 2rem;">
-                    <a href="/products.html" class="btn btn-outline">View All Products</a>
+                <div class="hero-poster-right">
+                    <div class="hero-flavour-grid">
+                        <a href="/products.html?flavor=Golden+Pista"><img src="/images/golden-pista/front_picture.png" alt="Golden Pista"></a>
+                        <a href="/products.html?flavor=Nut-n-Crunch+Bite"><img src="/images/nut-n-crunch-bite/front_picture.png" alt="Nut-n-Crunch Bite"></a>
+                        <a href="/products.html?flavor=Midnight+Coco+Date"><img src="/images/midnight-coco-date/front_picture.png" alt="Midnight Coco Date"></a>
+                        <a href="/products.html?flavor=Cardamom+Rose+Delight"><img src="/images/cardamom-rose-delight/front_picture.png" alt="Cardamom Rose Delight"></a>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- Categories -->
-        <section class="section section-alt">
+        <!-- What Sets Us Apart -->
+        <section class="section sets-apart">
             <div class="container">
-                <h2 class="section-title">Shop by Category</h2>
-                <div id="categories" class="category-grid">
-                    <!-- Filled by JS -->
-                </div>
-            </div>
-        </section>
+                <h2 class="section-title">What Sets Us Apart</h2>
 
-        <!-- About -->
-        <section class="section">
-            <div class="container text-center">
-                <h2 class="section-title">Why Bakehouse?</h2>
-                <div class="features">
-                    <div class="feature">
-                        <div class="feature-icon">🌾</div>
-                        <h3>Premium Ingredients</h3>
-                        <p>We source the finest flours, butters, and natural ingredients for every recipe.</p>
+                <div class="apart-row">
+                    <div class="apart-text">
+                        <h3>Clean Ingredients</h3>
+                        <p>Every bar is made from whole, unprocessed ingredients you can actually pronounce. No artificial flavours, colours, or preservatives — just real food that nourishes your body.</p>
                     </div>
-                    <div class="feature">
-                        <div class="feature-icon">👨‍🍳</div>
-                        <h3>Baked Fresh Daily</h3>
-                        <p>Every item is baked fresh the day it ships — never frozen, never stale.</p>
+                    <div class="apart-img">
+                        <img src="/images/features/clean-ingredients.png" alt="Clean Ingredients">
                     </div>
-                    <div class="feature">
-                        <div class="feature-icon">🚚</div>
-                        <h3>Fast Delivery</h3>
-                        <p>Order by noon and get your baked goods delivered the very next day.</p>
+                </div>
+
+                <div class="apart-row apart-row-reverse">
+                    <div class="apart-text">
+                        <h3>Sweetened with Dates</h3>
+                        <p>We sweeten our bars with real whole dates — never refined sugar or artificial sweeteners. That means you get nature’s rich, caramel-like sweetness along with the natural fibre found in dates. This fibre helps slow the release of sugars, supporting steadier energy and helping avoid sudden spikes. It’s not sugar extracted from dates — it’s the wholesome goodness of whole dates in every bite.</p>
+                    </div>
+                    <div class="apart-img">
+                        <img src="/images/features/sweetened-with-dates.png" alt="Sweetened with Dates">
+                    </div>
+                </div>
+
+                <div class="apart-row">
+                    <div class="apart-text">
+                        <h3>Control insulin spikes</h3>
+                        <p>Our bars are designed with a low glycaemic profile so you get sustained energy without the crash. Perfect for steady focus and balanced blood sugar throughout the day.</p>
+                    </div>
+                    <div class="apart-img">
+                        <img src="/images/features/no-insulin-spikes.png" alt="Control Insulin Spikes">
+                    </div>
+                </div>
+
+                <div class="apart-row apart-row-reverse">
+                    <div class="apart-text">
+                        <h3>Gluten Free</h3>
+                        <p>Made with sattu powder from dry-roasted Bengal gram, also known as kala chana, our bars are naturally gluten free and packed with wholesome goodness. The chickpeas are roasted, their outer husks are removed, and they are then finely ground into a nourishing flour that brings a rich, earthy flavor and satisfying texture — without any wheat or gluten-containing grains. A delicious choice for anyone looking for a clean, gluten-free snack.</p>
+                    </div>
+                    <div class="apart-img">
+                        <img src="/images/features/gluten-free.png" alt="Gluten Free">
+                    </div>
+                </div>
+
+                <div class="apart-row">
+                    <div class="apart-text">
+                        <h3>Made with Ghee (Clarified Butter)</h3>
+                        <p>We use traditional ghee for its rich flavour and health benefits — packed with fat-soluble vitamins, easy to digest, and naturally free from lactose and casein.</p>
+                    </div>
+                    <div class="apart-img">
+                        <img src="/images/features/made-with-ghee.png" alt="Made with Ghee">
+                    </div>
+                </div>
+
+                <div class="apart-row apart-row-reverse">
+                    <div class="apart-text">
+                        <h3>Healthy Snack for Kids</h3>
+                        <p>Safe, nutritious, and kid-approved. Our bars make the perfect lunchbox addition — giving children the energy they need without any of the junk.</p>
+                    </div>
+                    <div class="apart-img">
+                        <img src="/images/features/healthy-snack.png" alt="Healthy Snack for Kids">
                     </div>
                 </div>
             </div>
@@ -76,7 +115,7 @@
 
     <footer>
         <div class="container">
-            <p>&copy; 2026 Bakehouse. All rights reserved.</p>
+            <p>&copy; 2026 Date&amp;Crumb. All rights reserved.</p>
         </div>
     </footer>
 

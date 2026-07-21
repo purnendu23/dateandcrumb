@@ -1,0 +1,30 @@
+name: Cardamom Rose Delight
+description: >
+  An aromatic bar infused with fragrant cardamom and delicate
+  rose petals — a taste of tradition.
+price: 5.00
+category: Healthy Bars
+featured: true
+
+images:
+  - /images/cardamom-rose-delight/front_picture.png
+  - /images/cardamom-rose-delight/nakpic_1.png
+  - /images/cardamom-rose-delight/ingredients_picture.png
+  - /images/cardamom-rose-delight/nutrition.png
+
+ingredients: >
+  Cashews, Dates, Rose Water, Cardamom, Pistachios, Coconut Oil,
+  Saffron, Honey, Sea Salt
+
+nutritional_info: |
+  Serving Size: 1 bar (40g)
+  Calories: 185
+  Total Fat: 9g
+  Saturated Fat: 3g
+  Cholesterol: 0mg
+  Sodium: 40mg
+  Total Carbohydrates: 23g
+  Dietary Fiber: 2g
+  Total Sugars: 13g
+  Protein: 4g
+

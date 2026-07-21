@@ -1,6 +1,21 @@
 /* Cart utility — shared across all pages */
 const Cart = {
-    KEY: 'bakehouse_cart',
+    _userId: null,
+
+    get KEY() {
+        return this._userId ? `bakehouse_cart_${this._userId}` : 'bakehouse_cart_guest';
+    },
+
+    setUser(userId) {
+        this._userId = userId;
+
+        // Clear guest cart when a user logs in so it doesn't leak between users
+        if (userId) {
+            localStorage.removeItem('bakehouse_cart_guest');
+        }
+
+        this.updateBadge();
+    },
 
     getItems() {
         try {
@@ -66,5 +81,23 @@ const Cart = {
     }
 };
 
-// Update badge on every page load
-document.addEventListener('DOMContentLoaded', () => Cart.updateBadge());
+// Initialize cart user context and update badge on every page load
+Cart._ready = new Promise((resolve) => {
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Migrate old shared cart key
+        const oldData = localStorage.getItem('bakehouse_cart');
+        if (oldData) {
+            localStorage.setItem('bakehouse_cart_guest', oldData);
+            localStorage.removeItem('bakehouse_cart');
+        }
+
+        try {
+            const res = await fetch('/api/auth/me');
+            const data = await res.json();
+            Cart.setUser(data.user ? data.user.id : null);
+        } catch {
+            Cart.setUser(null);
+        }
+        resolve();
+    });
+});

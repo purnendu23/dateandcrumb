@@ -16,8 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         document.title = `${product.name} — Bakehouse`;
 
-        const stockClass = product.stock > 5 ? 'stock-ok' : 'stock-low';
-        const stockText = product.stock > 0 ? `${product.stock} in stock` : 'Out of stock';
 
         let images = [];
         try { images = JSON.parse(product.image_url); } catch (e) { images = [product.image_url]; }
@@ -58,13 +56,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="product-detail-info">
                 <div class="product-detail-category">${escapeHTML(product.category_name || '')}</div>
                 <h1>${escapeHTML(product.name)}</h1>
-                <div class="product-detail-price">$${product.price.toFixed(2)}</div>
+                <div class="product-detail-price">$${parseFloat(product.price).toFixed(2)}</div>
                 <p class="product-detail-desc">${escapeHTML(product.description || '')}</p>
-                <p class="product-detail-stock ${stockClass}">${stockText}</p>
-                ${product.stock > 0 ? `
+                ${!product.out_of_stock ? `
                 <div class="quantity-selector">
                     <label for="qty">Quantity:</label>
-                    <input type="number" id="qty" value="1" min="1" max="${product.stock}">
+                    <input type="number" id="qty" value="1" min="1">
                 </div>
                 <button class="btn btn-primary btn-lg" id="add-to-cart-btn">Add to Cart</button>
                 ` : '<button class="btn btn-outline btn-lg" disabled>Out of Stock</button>'}
@@ -77,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (addBtn) {
             addBtn.addEventListener('click', () => {
                 const qty = parseInt(document.getElementById('qty').value, 10) || 1;
-                Cart.addItem({ id: product.id, name: product.name, price: product.price }, qty);
+                Cart.addItem({ id: product.id, name: product.name, price: parseFloat(product.price) }, qty);
                 showToast(`${product.name} added to cart!`);
             });
         }

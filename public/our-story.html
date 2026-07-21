@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Story — Date&amp;Crumb</title>
+    <link rel="icon" type="image/png" href="/images/logo/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/images/logo/favicon.svg" />
+    <link rel="shortcut icon" href="/images/logo/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/logo/apple-touch-icon.png" />
+    <link rel="manifest" href="/images/logo/site.webmanifest" />
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        .our-story-section {
+            font-family: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+            background: linear-gradient(180deg, oklch(0.975 0.012 80) 0%, oklch(0.94 0.03 70) 100%);
+            color: oklch(0.28 0.06 40);
+            padding: 4rem 0;
+        }
+        .our-story-section h1 {
+            font-family: "Instrument Serif", ui-serif, Georgia, serif;
+            font-size: 3.5rem;
+            letter-spacing: -0.01em;
+            color: oklch(0.38 0.11 40);
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+        .our-story-section .story-body {
+            max-width: 720px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+            line-height: 1.9;
+            color: oklch(0.45 0.05 45);
+        }
+        .our-story-section .story-body p {
+            margin-bottom: 1.5rem;
+        }
+        .our-story-section .story-card {
+            background: oklch(0.985 0.008 80);
+            border-radius: 0.625rem;
+            padding: 3rem;
+            box-shadow: 0 30px 60px -30px oklch(0.28 0.06 40 / 0.35);
+            border: 1px solid oklch(0.86 0.03 70);
+        }
+        .our-story-section .story-highlight {
+            font-family: "Instrument Serif", ui-serif, Georgia, serif;
+            font-size: 1.5rem;
+            font-style: italic;
+            color: oklch(0.63 0.16 45);
+            text-align: center;
+            padding: 2rem 1rem;
+            border-top: 1px solid oklch(0.86 0.03 70);
+            border-bottom: 1px solid oklch(0.86 0.03 70);
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <a href="/" class="logo"><img src="/images/logo/our-story-logo.svg" alt="Our Story"></a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/products.html">Products</a></li>
+                <li><a href="/our-story.html" class="active">Our Story</a></li>
+                <li><a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="badge">0</span></a></li>
+                <li id="auth-nav"></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="our-story-section">
+            <div class="container" style="max-width: 800px;">
+                <div class="story-card">
+                    <div class="story-highlight" style="margin-top: 0; border-top: none;">
+                        Made for busy days.<br>With ingredients you can trust.
+                    </div>
+                    <div class="story-body">
+                        <p>As a twin mom, I was always searching the snack shelves for something I could truly feel good about — for my kids, for myself, for busy mornings, work bags, lunchboxes, long shifts, and the little moments between meals.</p>
+                        <p>But so many snacks that looked wholesome still had added sugars, syrups, artificial sweeteners, or ingredients I would not normally use at home.</p>
+                        <p>That search became the beginning of Date &amp; Crumb.</p>
+                        <p>Our bars are inspired by the warmth of familiar pantry ingredients and Indian flavors, made with whole dates, roasted gram flour, nuts, ghee, and simple, recognizable ingredients.</p>
+                        <p>They are made for everyday life — convenient enough for busy days, comforting enough to feel homemade, and honest enough to trust.</p>
+                    </div>
+                    <div class="story-highlight">
+                        Simple ingredients. Honest goodness.
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Date&amp;Crumb. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/cart.js"></script>
+    <script src="/js/auth-nav.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,5 +1,32 @@
 /* Checkout page — multi-step: Shipping → Payment → Review → Place Order */
+
+// ─── Phone number auto-format (XXX-XXX-XXXX) ────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const phoneInput = document.getElementById('customer_phone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function () {
+            const cursorPos = this.selectionStart;
+            const oldLength = this.value.length;
+            let digits = this.value.replace(/\D/g, '').substring(0, 10);
+            let formatted;
+            if (digits.length > 6) {
+                formatted = digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
+            } else if (digits.length > 3) {
+                formatted = digits.slice(0, 3) + '-' + digits.slice(3);
+            } else {
+                formatted = digits;
+            }
+            this.value = formatted;
+            // Adjust cursor position
+            const newLength = this.value.length;
+            const diff = newLength - oldLength;
+            this.setSelectionRange(cursorPos + diff, cursorPos + diff);
+        });
+    }
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
+    await Cart._ready;
     const items = Cart.getItems();
     const form = document.getElementById('checkout-form');
     const formWrapper = document.getElementById('checkout-form-wrapper');
@@ -46,27 +73,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const useProfileCheckbox = document.getElementById('use-profile-info');
-    if (useProfileCheckbox) {
-        useProfileCheckbox.addEventListener('change', () => {
-            if (useProfileCheckbox.checked && profileData) {
-                form.customer_name.value = profileData.name || '';
-                form.customer_email.value = profileData.email || '';
-                form.customer_phone.value = profileData.phone || '';
-                form.shipping_address.value = profileData.shipping_address || '';
-                form.shipping_address2.value = profileData.shipping_address2 || '';
-                form.shipping_city.value = profileData.shipping_city || '';
-                form.shipping_state.value = profileData.shipping_state || '';
-                form.shipping_zip.value = profileData.shipping_zip || '';
-            } else {
-                form.customer_name.value = '';
-                form.customer_email.value = '';
-                form.customer_phone.value = '';
-                form.shipping_address.value = '';
-                form.shipping_address2.value = '';
-                form.shipping_city.value = '';
-                form.shipping_state.value = '';
-                form.shipping_zip.value = '';
+    const btnUseProfile = document.getElementById('btn-use-profile');
+    if (btnUseProfile && profileData) {
+        btnUseProfile.addEventListener('click', () => {
+            form.customer_name.value = profileData.name || '';
+            form.customer_email.value = profileData.email || '';
+            form.customer_phone.value = profileData.phone || '';
+            form.shipping_address.value = profileData.shipping_address || '';
+            form.shipping_address2.value = profileData.shipping_address2 || '';
+            form.shipping_city.value = profileData.shipping_city || '';
+            form.shipping_state.value = profileData.shipping_state || '';
+            form.shipping_zip.value = profileData.shipping_zip || '';
+        });
+    }
+
+    // ─── Address Book ────────────────────────────────────
+    const btnAddressBook = document.getElementById('btn-address-book');
+    const addressBookModal = document.getElementById('address-book-modal');
+    const closeAddressBook = document.getElementById('close-address-book');
+
+    if (btnAddressBook) {
+        btnAddressBook.addEventListener('click', async () => {
+            addressBookModal.style.display = 'flex';
+            const listEl = document.getElementById('address-book-list');
+            listEl.innerHTML = '<p style="color:var(--color-text-light);">Loading...</p>';
+
+            try {
+                const res = await fetch('/api/auth/addresses');
+                const data = await res.json();
+
+                if (!data.addresses || data.addresses.length === 0) {
+                    listEl.innerHTML = '<p style="color:var(--color-text-light);">No saved addresses yet. Addresses from your orders will appear here automatically.</p>';
+                    return;
+                }
+
+                listEl.innerHTML = data.addresses.map((addr, idx) => `
+                    <div class="address-book-entry" data-index="${idx}" style="border:1px solid #e0e0e0; border-radius:8px; padding:1rem; margin-bottom:0.75rem; cursor:pointer; transition:background 0.2s;">
+                        ${addr.label ? `<div style="font-weight:600; font-size:0.8rem; color:var(--color-primary); text-transform:uppercase; margin-bottom:0.25rem;">${escapeHTML(addr.label)}${addr.is_default ? ' ★' : ''}</div>` : ''}
+                        <div style="font-weight:600;">${escapeHTML(addr.name || '')}</div>
+                        <div>${escapeHTML(addr.address)}${addr.address2 ? ', ' + escapeHTML(addr.address2) : ''}</div>
+                        <div>${escapeHTML(addr.city)}${addr.state ? ', ' + escapeHTML(addr.state) : ''} ${escapeHTML(addr.zip)}</div>
+                        ${addr.phone ? `<div style="color:var(--color-text-light); font-size:0.9rem;">${escapeHTML(addr.phone)}</div>` : ''}
+                    </div>
+                `).join('');
+
+                // Click to select an address
+                listEl.querySelectorAll('.address-book-entry').forEach((entry) => {
+                    entry.addEventListener('click', () => {
+                        const idx = parseInt(entry.dataset.index, 10);
+                        const addr = data.addresses[idx];
+                        form.customer_name.value = addr.name || '';
+                        form.customer_phone.value = addr.phone || '';
+                        form.shipping_address.value = addr.address || '';
+                        form.shipping_address2.value = addr.address2 || '';
+                        form.shipping_city.value = addr.city || '';
+                        form.shipping_state.value = addr.state || '';
+                        form.shipping_zip.value = addr.zip || '';
+                        // Keep email from profile
+                        if (profileData && !form.customer_email.value) {
+                            form.customer_email.value = profileData.email || '';
+                        }
+                        if (useProfileCheckbox) useProfileCheckbox.checked = false;
+                        addressBookModal.style.display = 'none';
+                    });
+                    entry.addEventListener('mouseover', () => { entry.style.background = '#f5f0eb'; });
+                    entry.addEventListener('mouseout', () => { entry.style.background = '#fff'; });
+                });
+            } catch (err) {
+                listEl.innerHTML = '<p style="color:var(--color-error);">Failed to load addresses.</p>';
             }
+        });
+    }
+
+    if (closeAddressBook) {
+        closeAddressBook.addEventListener('click', () => {
+            addressBookModal.style.display = 'none';
+        });
+    }
+    if (addressBookModal) {
+        addressBookModal.addEventListener('click', (e) => {
+            if (e.target === addressBookModal) addressBookModal.style.display = 'none';
         });
     }
 
@@ -86,9 +172,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ─── Initialize Stripe (but don't mount yet — step 2 is hidden) ──
     let stripeElements = null;
-    let cardNumberElement = null;
-    let cardExpiryElement = null;
-    let cardCvcElement = null;
     let cardMounted = false;
     if (stripePublicKey && window.Stripe) {
         stripe = Stripe(stripePublicKey);
@@ -98,6 +181,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             '<p style="color:#c00;">Stripe is not configured. Card payments are unavailable.</p>';
     }
 
+    let cardElement = null;
+
     function mountStripeCard() {
         if (!stripeElements || cardMounted) return;
 
@@ -105,31 +190,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             base: {
                 fontSize: '16px',
                 color: '#333',
+                fontFamily: '"Inter", system-ui, sans-serif',
                 '::placeholder': { color: '#999' },
             },
         };
 
-        cardNumberElement = stripeElements.create('cardNumber', { style: elementStyle, showIcon: true });
-        cardExpiryElement = stripeElements.create('cardExpiry', { style: elementStyle });
-        cardCvcElement = stripeElements.create('cardCvc', { style: elementStyle });
+        // Use a single combined card element (number + expiry + cvc in one)
+        cardElement = stripeElements.create('card', { style: elementStyle, disableLink: true, hidePostalCode: true });
 
-        cardNumberElement.mount('#stripe-card-number');
-        cardExpiryElement.mount('#stripe-card-expiry');
-        cardCvcElement.mount('#stripe-card-cvc');
+        // Mount into the card-number container; hide the separate expiry/cvc containers
+        document.getElementById('stripe-card-number').innerHTML = '';
+        cardElement.mount('#stripe-card-number');
+
+        // Hide the separate expiry and cvc fields since 'card' element includes them
+        const expiryGroup = document.getElementById('stripe-card-expiry').closest('.form-group');
+        const cvcGroup = document.getElementById('stripe-card-cvc').closest('.form-group');
+        if (expiryGroup) expiryGroup.style.display = 'none';
+        if (cvcGroup) cvcGroup.style.display = 'none';
+        // Also hide the form-row parent if both children are hidden
+        const formRow = expiryGroup?.parentElement;
+        if (formRow && formRow.classList.contains('form-row')) formRow.style.display = 'none';
 
         const errEl = document.getElementById('stripe-card-errors');
-        [cardNumberElement, cardExpiryElement, cardCvcElement].forEach(el => {
-            el.on('change', (event) => {
-                errEl.textContent = event.error ? event.error.message : '';
-            });
+        cardElement.on('change', (event) => {
+            errEl.textContent = event.error ? event.error.message : '';
         });
 
         cardMounted = true;
     }
 
-    // ─── Show PayPal option if configured ────────────────
+    // ─── Show PayPal option if configured & load SDK ─────
+    let paypalSDKReady = false;
     if (paypalClientId) {
         document.getElementById('paypal-method-option').style.display = '';
+        const ppScript = document.createElement('script');
+        ppScript.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(paypalClientId)}&currency=USD`;
+        ppScript.async = true;
+        ppScript.onload = () => { paypalSDKReady = true; };
+        document.head.appendChild(ppScript);
     }
 
     // ─── Step navigation ─────────────────────────────────
@@ -158,7 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Step 1 → Step 2
-    document.getElementById('btn-to-payment').addEventListener('click', () => {
+    document.getElementById('btn-to-payment').addEventListener('click', async () => {
         const errEl = document.getElementById('shipping-error');
         errEl.style.display = 'none';
 
@@ -173,6 +271,87 @@ document.addEventListener('DOMContentLoaded', async () => {
             errEl.textContent = 'Please fill in all required fields.';
             errEl.style.display = 'block';
             return;
+        }
+
+        // ─── Address validation logic ────────────────────
+        const autoCompleted = window._addressAutoCompleted;
+        const isHighConfidence = autoCompleted &&
+            autoCompleted.hasStreetNumber &&
+            autoCompleted.zip === zip &&
+            autoCompleted.city.toLowerCase() === city.toLowerCase() &&
+            autoCompleted.state === state;
+
+        if (!isHighConfidence) {
+            // Validate via server API
+            const btnPayment = document.getElementById('btn-to-payment');
+            btnPayment.disabled = true;
+            btnPayment.textContent = 'Validating address…';
+
+            try {
+                const valRes = await fetch('/api/address/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address, city, state, zip }),
+                });
+                const valData = await valRes.json();
+
+                btnPayment.disabled = false;
+                btnPayment.textContent = 'Continue to Payment';
+
+                if (valData.corrected && !valData.cached) {
+                    // Show "Did you mean?" suggestion
+                    const c = valData.corrected;
+                    errEl.innerHTML = `
+                        <div style="margin-bottom:0.5rem;">📍 <strong>Did you mean:</strong></div>
+                        <div style="margin-bottom:0.75rem; padding:0.5rem; background:#f9f6f2; border-radius:6px;">
+                            ${escapeHTML(c.address)}<br>
+                            ${escapeHTML(c.city)}, ${escapeHTML(c.state)} ${escapeHTML(c.zip)}
+                        </div>
+                        <div style="display:flex; gap:0.75rem;">
+                            <button type="button" id="btn-accept-correction" class="btn btn-primary btn-sm">Use suggested address</button>
+                            <button type="button" id="btn-keep-original" class="btn btn-outline btn-sm">Keep my address</button>
+                        </div>
+                    `;
+                    errEl.style.display = 'block';
+                    errEl.style.color = 'var(--color-text)';
+                    errEl.style.background = '#fff8f0';
+                    errEl.style.border = '1px solid #e0c9a6';
+                    errEl.style.borderRadius = '8px';
+                    errEl.style.padding = '1rem';
+
+                    document.getElementById('btn-accept-correction').addEventListener('click', () => {
+                        form.shipping_address.value = c.address;
+                        form.shipping_city.value = c.city;
+                        if (form.shipping_state.querySelector(`option[value="${c.state}"]`)) {
+                            form.shipping_state.value = c.state;
+                        }
+                        form.shipping_zip.value = c.zip;
+                        errEl.style.display = 'none';
+                        errEl.style.cssText = '';
+                        goToStep(1);
+                        mountStripeCard();
+                    });
+
+                    document.getElementById('btn-keep-original').addEventListener('click', () => {
+                        errEl.style.display = 'none';
+                        errEl.style.cssText = '';
+                        goToStep(1);
+                        mountStripeCard();
+                    });
+
+                    return;
+                }
+
+                if (!valData.valid && valData.confidence === 'low') {
+                    errEl.textContent = 'We could not verify this address. Please double-check it before continuing.';
+                    errEl.style.display = 'block';
+                    // Still allow proceeding — just a warning. They already confirmed fields.
+                }
+            } catch (err) {
+                // Validation service unavailable — proceed anyway
+                btnPayment.disabled = false;
+                btnPayment.textContent = 'Continue to Payment';
+            }
         }
 
         goToStep(1);
@@ -194,7 +373,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Step 2 → Step 3
-    document.getElementById('btn-to-review').addEventListener('click', () => {
+    document.getElementById('btn-to-review').addEventListener('click', async () => {
         const errEl = document.getElementById('payment-error');
         errEl.style.display = 'none';
 
@@ -225,38 +404,62 @@ document.addEventListener('DOMContentLoaded', async () => {
         goToStep(2);
 
         // Initialize PayPal buttons on step 3 if needed
-        if (selectedMethod === 'paypal' && paypalClientId && window.paypal) {
+        if (selectedMethod === 'paypal' && paypalClientId) {
             const container = document.getElementById('paypal-button-container');
-            container.innerHTML = '';
-            window.paypal.Buttons({
-                createOrder: async () => {
-                    const res = await fetch('/api/payments/paypal/create-order', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity })) }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.error);
-                    return data.id;
-                },
-                onApprove: async (data) => {
-                    const captureRes = await fetch('/api/payments/paypal/capture-order', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ orderID: data.orderID }),
-                    });
-                    const captureData = await captureRes.json();
-                    if (captureData.status === 'COMPLETED') {
-                        await placeOrder('paypal', captureData.id);
-                    } else {
-                        showCheckoutError('PayPal payment was not completed. Please try again.');
-                    }
-                },
-                onError: (err) => {
-                    console.error('PayPal error:', err);
-                    showCheckoutError('PayPal encountered an error. Please try again.');
-                },
-            }).render('#paypal-button-container');
+            container.innerHTML = '<p style="text-align:center; color:var(--color-text-light);">Loading PayPal…</p>';
+
+            // Wait for SDK to load (up to 10s)
+            const waitForSDK = () => new Promise((resolve) => {
+                if (window.paypal) return resolve(true);
+                let elapsed = 0;
+                const interval = setInterval(() => {
+                    elapsed += 200;
+                    if (window.paypal) { clearInterval(interval); resolve(true); }
+                    else if (elapsed >= 10000) { clearInterval(interval); resolve(false); }
+                }, 200);
+            });
+
+            const sdkLoaded = await waitForSDK();
+            if (!sdkLoaded) {
+                container.innerHTML = '<p style="color:#c00;">Failed to load PayPal. Please refresh and try again.</p>';
+            } else {
+                container.innerHTML = '';
+                window.paypal.Buttons({
+                    createOrder: async () => {
+                        const res = await fetch('/api/payments/paypal/create-order', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity })) }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error);
+                        return data.id;
+                    },
+                    onApprove: async (data) => {
+                        try {
+                            const captureRes = await fetch('/api/payments/paypal/capture-order', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ orderID: data.orderID }),
+                            });
+                            const captureData = await captureRes.json();
+                            if (captureData.status === 'COMPLETED') {
+                                await placeOrder('paypal', captureData.id);
+                            } else {
+                                console.error('PayPal capture response:', captureData);
+                                showCheckoutError('PayPal payment was not completed. Please try again.');
+                            }
+                        } catch (err) {
+                            console.error('PayPal capture error:', err);
+                            showCheckoutError('Failed to capture PayPal payment. Please try again.');
+                        }
+                    },
+                    onError: (err) => {
+                        console.error('PayPal error:', err);
+                        showCheckoutError('PayPal encountered an error. Please try again.');
+                    },
+                }).render('#paypal-button-container');
+            }
         }
     });
 
@@ -293,7 +496,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 2. Confirm payment with Stripe.js
             const { error, paymentIntent } = await stripe.confirmCardPayment(intentData.clientSecret, {
-                payment_method: { card: cardNumberElement },
+                payment_method: { card: cardElement },
             });
 
             if (error) {
@@ -350,7 +553,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         Cart.clear();
         formWrapper.style.display = 'none';
         document.getElementById('confirm-order-id').textContent = result.order_id;
-        document.getElementById('confirm-total').textContent = result.total.toFixed(2);
+        document.getElementById('confirm-total').textContent = parseFloat(result.total).toFixed(2);
         confirmation.style.display = 'block';
 
         // Show post-purchase signup for guests
@@ -444,6 +647,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function hideCheckoutError() {
         document.getElementById('checkout-error').style.display = 'none';
     }
+
 });
 
 function escapeHTML(str) {

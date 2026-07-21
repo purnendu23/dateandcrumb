@@ -7,7 +7,7 @@ const router = express.Router();
 
 const SALT_ROUNDS = 12;
 
-// POST /api/auth/register — email/password signup (sends verification email)
+// POST /api/auth/register
 router.post('/register', async (req, res) => {
     const db = req.app.locals.db;
     const { email, password, name, phone, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip } = req.body;
@@ -16,8 +16,8 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const existing = db.prepare('SELECT id, verified FROM users WHERE email = ?').get(email);
-    if (existing) {
+    const [existing] = await db.execute('SELECT id, verified FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
         return res.status(409).json({ error: 'An account with this email already exists.' });
     }
 
@@ -25,25 +25,34 @@ router.post('/register', async (req, res) => {
         const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
         const token = crypto.randomBytes(32).toString('hex');
 
-        db.prepare(
+        const [result] = await db.execute(
             `INSERT INTO users (email, password_hash, name, provider, verified, verification_token,
              phone, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip)
-             VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`
-        ).run(email, passwordHash, name || null, 'local', token,
-              phone || null, shipping_address || null, shipping_address2 || null,
-              shipping_city || null, shipping_state || null, shipping_zip || null);
+             VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
+            [email, passwordHash, name || null, 'local', token,
+             phone || null, shipping_address || null, shipping_address2 || null,
+             shipping_city || null, shipping_state || null, shipping_zip || null]
+        );
+
+        // Auto-add shipping address to address book if provided
+        if (shipping_address && shipping_city && shipping_zip) {
+            const newUserId = result.insertId;
+            await db.execute(
+                'INSERT INTO address_book (user_id, label, name, phone, address, address2, city, state, zip, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+                [newUserId, 'Profile Address', name || null, phone || null,
+                 shipping_address, shipping_address2 || null, shipping_city, shipping_state || null, shipping_zip]
+            );
+        }
 
         const baseUrl = `${req.protocol}://${req.get('host')}`;
         const verifyUrl = `${baseUrl}/api/auth/verify?token=${encodeURIComponent(token)}`;
 
-        // Always log the verification link to the console for development
         console.log(`\n📧 Verification link for ${email}:\n   ${verifyUrl}\n`);
 
         try {
             await sendVerificationEmail(email, token, baseUrl);
         } catch (emailErr) {
             console.error('Failed to send verification email:', emailErr.message);
-            // Don't fail registration — account is created, link is in the console
         }
 
         res.json({ message: 'Registration successful. Please check your email to verify your account.' });
@@ -53,8 +62,8 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// GET /api/auth/verify — email verification link
-router.get('/verify', (req, res) => {
+// GET /api/auth/verify
+router.get('/verify', async (req, res) => {
     const db = req.app.locals.db;
     const { token } = req.query;
 
@@ -62,7 +71,8 @@ router.get('/verify', (req, res) => {
         return res.redirect('/verify.html?status=error&message=Missing+token');
     }
 
-    const user = db.prepare('SELECT id, email, name, verified FROM users WHERE verification_token = ?').get(token);
+    const [rows] = await db.execute('SELECT id, email, name, verified FROM users WHERE verification_token = ?', [token]);
+    const user = rows[0];
 
     if (!user) {
         return res.redirect('/verify.html?status=error&message=Invalid+or+expired+link');
@@ -72,19 +82,17 @@ router.get('/verify', (req, res) => {
         return res.redirect('/verify.html?status=already');
     }
 
-    db.prepare('UPDATE users SET verified = 1, verification_token = NULL WHERE id = ?').run(user.id);
+    await db.execute('UPDATE users SET verified = 1, verification_token = NULL WHERE id = ?', [user.id]);
 
-    // Auto-login the user and redirect to profile completion
     req.login({ id: user.id, email: user.email, name: user.name }, (err) => {
         if (err) {
-            // If auto-login fails, still show success but go to login page
             return res.redirect('/verify.html?status=success');
         }
         return res.redirect('/complete-profile.html');
     });
 });
 
-// POST /api/auth/login — email/password login
+// POST /api/auth/login
 router.post('/login', (req, res, next) => {
     passport.authenticate('local', (err, user, info) => {
         if (err) return res.status(500).json({ error: 'Login failed.' });
@@ -103,7 +111,7 @@ router.post('/logout', (req, res) => {
     });
 });
 
-// GET /api/auth/me — current user
+// GET /api/auth/me
 router.get('/me', (req, res) => {
     if (req.isAuthenticated()) {
         res.json({ user: { id: req.user.id, email: req.user.email, name: req.user.name, is_admin: req.user.is_admin } });
@@ -112,33 +120,44 @@ router.get('/me', (req, res) => {
     }
 });
 
-// GET /api/auth/profile — full profile with shipping info
-router.get('/profile', (req, res) => {
+// GET /api/auth/profile
+router.get('/profile', async (req, res) => {
     if (!req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not logged in.' });
     }
     const db = req.app.locals.db;
-    const user = db.prepare(
-        'SELECT id, email, name, phone, organization, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip FROM users WHERE id = ?'
-    ).get(req.user.id);
+    const [rows] = await db.execute(
+        'SELECT id, email, name, phone, organization, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip FROM users WHERE id = ?',
+        [req.user.id]
+    );
 
-    if (!user) return res.status(404).json({ error: 'User not found.' });
-    res.json({ profile: user });
+    if (!rows[0]) return res.status(404).json({ error: 'User not found.' });
+    res.json({ profile: rows[0] });
 });
 
-// PUT /api/auth/profile — update shipping info
-router.put('/profile', (req, res) => {
+// PUT /api/auth/profile
+router.put('/profile', async (req, res) => {
     if (!req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not logged in.' });
     }
     const db = req.app.locals.db;
     const { name, phone, organization, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip } = req.body;
 
-    db.prepare(
-        `UPDATE users SET name = COALESCE(?, name), phone = ?, organization = ?, shipping_address = ?, shipping_address2 = ?,
-         shipping_city = ?, shipping_state = ?, shipping_zip = ? WHERE id = ?`
-    ).run(name || null, phone || null, organization || null, shipping_address || null, shipping_address2 || null,
-          shipping_city || null, shipping_state || null, shipping_zip || null, req.user.id);
+    if (phone !== undefined) {
+        await db.execute(
+            `UPDATE users SET name = COALESCE(?, name), phone = ?, organization = ?, shipping_address = ?, shipping_address2 = ?,
+             shipping_city = ?, shipping_state = ?, shipping_zip = ? WHERE id = ?`,
+            [name || null, phone || null, organization || null, shipping_address || null, shipping_address2 || null,
+             shipping_city || null, shipping_state || null, shipping_zip || null, req.user.id]
+        );
+    } else {
+        await db.execute(
+            `UPDATE users SET name = COALESCE(?, name), organization = ?, shipping_address = ?, shipping_address2 = ?,
+             shipping_city = ?, shipping_state = ?, shipping_zip = ? WHERE id = ?`,
+            [name || null, organization || null, shipping_address || null, shipping_address2 || null,
+             shipping_city || null, shipping_state || null, shipping_zip || null, req.user.id]
+        );
+    }
 
     res.json({ message: 'Profile updated.' });
 });
@@ -146,12 +165,11 @@ router.put('/profile', (req, res) => {
 // Google OAuth
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-// POST /api/auth/forgot-password — generate reset token, print link to terminal
+// POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
     const db = req.app.locals.db;
     const { email } = req.body;
 
-    // Always return success to prevent user enumeration
     const genericMsg = 'If an account with that email exists, a password reset link has been generated. Check the terminal.';
 
     if (!email) {
@@ -159,14 +177,15 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     try {
-        const user = db.prepare("SELECT id, email FROM users WHERE email = ? AND provider = 'local'").get(email);
+        const [rows] = await db.execute("SELECT id, email FROM users WHERE email = ? AND provider = 'local'", [email]);
+        const user = rows[0];
 
         if (user) {
             const token = crypto.randomBytes(32).toString('hex');
-            const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+            const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
 
-            db.prepare('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?')
-                .run(token, expires, user.id);
+            await db.execute('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+                [token, expires, user.id]);
 
             const baseUrl = `${req.protocol}://${req.get('host')}`;
             const resetUrl = `${baseUrl}/reset-password.html?token=${encodeURIComponent(token)}`;
@@ -181,7 +200,7 @@ router.post('/forgot-password', async (req, res) => {
     }
 });
 
-// POST /api/auth/reset-password — validate token and set new password
+// POST /api/auth/reset-password
 router.post('/reset-password', async (req, res) => {
     const db = req.app.locals.db;
     const { token, password } = req.body;
@@ -195,9 +214,11 @@ router.post('/reset-password', async (req, res) => {
     }
 
     try {
-        const user = db.prepare(
-            "SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > datetime('now')"
-        ).get(token);
+        const [rows] = await db.execute(
+            "SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()",
+            [token]
+        );
+        const user = rows[0];
 
         if (!user) {
             return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
@@ -205,8 +226,8 @@ router.post('/reset-password', async (req, res) => {
 
         const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-        db.prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?')
-            .run(passwordHash, user.id);
+        await db.execute('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
+            [passwordHash, user.id]);
 
         res.json({ message: 'Password has been reset. You can now log in with your new password.' });
     } catch (err) {
@@ -231,5 +252,42 @@ router.post('/apple/callback',
 );
 
 router.get('/apple', passport.authenticate('apple'));
+
+// GET /api/auth/addresses
+router.get('/addresses', async (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Not logged in.' });
+    }
+    const db = req.app.locals.db;
+    const [addresses] = await db.execute(
+        'SELECT * FROM address_book WHERE user_id = ? ORDER BY is_default DESC, created_at DESC',
+        [req.user.id]
+    );
+    res.json({ addresses });
+});
+
+// POST /api/auth/addresses
+router.post('/addresses', async (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Not logged in.' });
+    }
+    const db = req.app.locals.db;
+    const { label, name, phone, address, address2, city, state, zip } = req.body;
+    if (!address || !city || !zip) {
+        return res.status(400).json({ error: 'Address, city, and zip are required.' });
+    }
+    const [existing] = await db.execute(
+        'SELECT id FROM address_book WHERE user_id = ? AND address = ? AND city = ? AND zip = ?',
+        [req.user.id, address, city, zip]
+    );
+    if (existing.length > 0) {
+        return res.json({ message: 'Address already in address book.', id: existing[0].id });
+    }
+    const [result] = await db.execute(
+        'INSERT INTO address_book (user_id, label, name, phone, address, address2, city, state, zip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [req.user.id, label || null, name || null, phone || null, address, address2 || null, city, state || null, zip]
+    );
+    res.json({ message: 'Address added.', id: result.insertId });
+});
 
 module.exports = router;
