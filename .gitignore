@@ -4,3 +4,15 @@ db/bakehouse.db
 # Environment files
 .env
 .env.*
+*.cert
+*.key
+
+.DS_Store
+.idea/*
+.vscode/*
+
+
+# Logs
+*.log
+npm-debug.log*
+
