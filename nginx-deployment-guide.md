@@ -197,6 +197,16 @@ server {
     # include /etc/letsencrypt/options-ssl-nginx.conf;
     # ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
+    # --- Maintenance mode (toggle with: touch/rm /var/www/dateandcrumb/maintenance.on) ---
+    if (-f /var/www/dateandcrumb/maintenance.on) {
+        return 503;
+    }
+    error_page 503 /maintenance.html;
+    location = /maintenance.html {
+        root /var/www/dateandcrumb/public;
+        internal;
+    }
+
     # --- Hide server info ---
     server_tokens off;
 
@@ -341,6 +351,82 @@ pm2 restart dateandcrumb
 
 ---
 
+## Step 9: Deploy Updates from GitHub
+
+### Initial Setup (one-time)
+
+Clone your repo on the server instead of using `scp`:
+
+```bash
+cd /var/www
+sudo rm -rf dateandcrumb
+git clone git@github.com:purnendu23/bakehouse.git dateandcrumb
+cd dateandcrumb
+npm install --production
+```
+
+### Create a Deploy Script
+
+```bash
+sudo nano /var/www/dateandcrumb/deploy.sh
+```
+
+```bash
+#!/bin/bash
+cd /var/www/dateandcrumb
+git pull origin main
+npm install --production
+pm2 restart dateandcrumb
+echo "✅ Deployed at $(date)"
+```
+
+```bash
+chmod +x /var/www/dateandcrumb/deploy.sh
+```
+
+### Manual Deploy (simplest)
+
+After pushing to GitHub, SSH into your server and run:
+
+```bash
+/var/www/dateandcrumb/deploy.sh
+```
+
+### Auto-Deploy with GitHub Actions (optional)
+
+Add this file to your repo at `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to DigitalOcean
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: /var/www/dateandcrumb/deploy.sh
+```
+
+Then in your GitHub repo, go to **Settings → Secrets and variables → Actions** and add:
+
+| Secret | Value |
+|--------|-------|
+| `DO_HOST` | Your droplet IP (e.g., `143.198.xx.xx`) |
+| `DO_USER` | Your SSH username (e.g., `root` or `deploy`) |
+| `DO_SSH_KEY` | Your private SSH key (contents of `~/.ssh/id_ed25519`) |
+
+Every push to `main` will automatically deploy to your server.
+
+---
+
 ## Quick Reference Commands
 
 | Task | Command |
@@ -356,6 +442,8 @@ pm2 restart dateandcrumb
 | Renew SSL certificate | `sudo certbot renew` |
 | Check MySQL status | `sudo systemctl status mysql` |
 | Connect to MySQL | `mysql -u dcuser -p dateandcrumb` |
+| Enable maintenance mode | `touch /var/www/dateandcrumb/maintenance.on && sudo systemctl reload nginx` |
+| Disable maintenance mode | `rm /var/www/dateandcrumb/maintenance.on && sudo systemctl reload nginx` |
 
 ---
 
