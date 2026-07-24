@@ -16,3 +16,5 @@ db/bakehouse.db
 *.log
 npm-debug.log*
 
+*.DS_Store
+
