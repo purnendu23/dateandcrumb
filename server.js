@@ -1,9 +1,15 @@
 const dotenv = require('dotenv');
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
-dotenv.config({ path: envFile });
+const path = require('path');
+const runtimeEnv = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+const envPaths = [
+    path.join(__dirname, `.env.${runtimeEnv}`),
+    path.join(__dirname, '.env'),
+];
+for (const envPath of envPaths) {
+    dotenv.config({ path: envPath });
+}
 
 const express = require('express');
-const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const session = require('express-session');

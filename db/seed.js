@@ -3,8 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const dotenv = require('dotenv');
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
-dotenv.config({ path: path.join(__dirname, '..', envFile) });
+const runtimeEnv = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+const envPaths = [
+    path.join(__dirname, '..', `.env.${runtimeEnv}`),
+    path.join(__dirname, '..', '.env'),
+];
+for (const envPath of envPaths) {
+    dotenv.config({ path: envPath });
+}
 
 async function seed() {
     const pool = mysql.createPool({
