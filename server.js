@@ -10,14 +10,13 @@ for (const envPath of envPaths) {
 }
 
 const express = require('express');
-const fs = require('fs');
-const https = require('https');
 const session = require('express-session');
 const passport = require('passport');
 const pool = require('./db/pool');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.set('trust proxy', 1);
 
 // Make pool available to routes
 app.locals.db = pool;
@@ -125,23 +124,9 @@ app.get('*', (req, res) => {
 // --- Start server ---
 async function start() {
     await runMigrations();
-
-    const sslKeyPath = path.join(__dirname, 'server.key');
-    const sslCertPath = path.join(__dirname, 'server.cert');
-
-    if (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) {
-        const sslOptions = {
-            key: fs.readFileSync(sslKeyPath),
-            cert: fs.readFileSync(sslCertPath),
-        };
-        https.createServer(sslOptions, app).listen(PORT, () => {
-            console.log(`Bakehouse server running at https://localhost:${PORT}`);
-        });
-    } else {
-        app.listen(PORT, () => {
-            console.log(`Bakehouse server running at http://localhost:${PORT} (no SSL — payment card inputs may not work)`);
-        });
-    }
+    app.listen(PORT, '127.0.0.1', () => {
+        console.log(`Bakehouse server running on http://127.0.0.1:${PORT}`);
+    });
 }
 
 start().catch(err => {
