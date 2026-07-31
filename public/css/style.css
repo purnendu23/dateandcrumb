@@ -1159,7 +1159,7 @@ footer {
 }
 
 .hero-flavour-grid {
-    max-width: 480px;   /* adjust this value */
+    max-width: 480px;
     margin-left: auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
