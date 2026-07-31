@@ -50,7 +50,7 @@ img { max-width: 100%; height: auto; display: block; }
     justify-content: space-between;
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 0.25rem 1.5rem;
+    padding: clamp(0.25rem, 1vw, 0.75rem) clamp(1rem, 3vw, 1.5rem);
 }
 
 header {
@@ -66,7 +66,7 @@ header {
     align-items: center;
 }
 .logo img {
-    height: 120px;
+    height: clamp(90px, 11vw, 120px);
     width: auto;
     margin-top: -0.5rem;
     margin-bottom: -0.5rem;
@@ -113,9 +113,9 @@ header {
 }
 
 .navbar-centered .logo img {
-    height: 150px;
-    margin-top: 1.5rem;
-    margin-bottom: 0.85rem;
+    height: clamp(105px, 15vw, 150px);
+    margin-top: clamp(0.75rem, 2vw, 1.5rem);
+    margin-bottom: clamp(0.5rem, 1.5vw, 0.85rem);
     margin-left: 0;
 }
 
@@ -1223,6 +1223,9 @@ footer {
 
 /* --- Responsive --- */
 @media (max-width: 768px) {
+    .navbar { padding: 0.5rem 1rem; }
+    .logo img { margin-left: -1.5rem; }
+    .navbar-centered .logo img { height: 110px; margin-top: 0.75rem; margin-bottom: 0.5rem; }
     .hero h1 { font-size: 2rem; }
     .hero { padding: 3rem 1.5rem; }
     .hero-poster-inner { flex-direction: column; text-align: center; }
@@ -1242,6 +1245,9 @@ footer {
 
 @media (max-width: 480px) {
     .navbar { flex-direction: column; gap: 0.75rem; }
+    .navbar { padding: 0.5rem 0.75rem; }
+    .logo img { height: 76px; margin-left: 0; margin-top: 0; margin-bottom: 0; }
+    .navbar-centered .logo img { height: 88px; margin-top: 0.5rem; margin-bottom: 0.35rem; }
     .product-grid { grid-template-columns: 1fr; }
     .product-card-img .carousel-img-wrap { height: 150px; }
 }
