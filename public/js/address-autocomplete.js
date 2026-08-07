@@ -64,32 +64,80 @@
     // ─── Google Places Implementation ────────────────────
     function loadGooglePlaces(apiKey) {
         return new Promise((resolve, reject) => {
-            if (window.google && window.google.maps && window.google.maps.places) {
-                initGoogleAutocomplete();
-                return resolve();
+            const previousAuthFailureHandler = window.gm_authFailure;
+            let settled = false;
+
+            function cleanup() {
+                if (window.gm_authFailure === onAuthFailure) {
+                    if (previousAuthFailureHandler) {
+                        window.gm_authFailure = previousAuthFailureHandler;
+                    } else {
+                        delete window.gm_authFailure;
+                    }
+                }
             }
 
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-            script.async = true;
-            script.defer = true;
+            function resolveOnce() {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                resolve();
+            }
 
-            script.onload = () => {
-                try {
-                    initGoogleAutocomplete();
-                    resolve();
-                } catch (e) {
-                    reject(e);
+            function rejectOnce(message) {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                reject(new Error(message));
+            }
+
+            function onAuthFailure() {
+                rejectOnce('Google Maps authentication failed');
+                if (typeof previousAuthFailureHandler === 'function') {
+                    previousAuthFailureHandler();
                 }
+            }
+
+            window.gm_authFailure = onAuthFailure;
+
+            if (window.google?.maps?.importLibrary) {
+                initGoogleAutocomplete().then(resolveOnce).catch((err) => {
+                    rejectOnce(err?.message || 'Google Places initialization failed');
+                });
+                return;
+            }
+
+            // Use loading=async with a named callback — required by the new Google Maps API
+            const callbackName = '__googleMapsReady_' + Date.now();
+            window[callbackName] = () => {
+                delete window[callbackName];
+                initGoogleAutocomplete().then(() => {
+                    // Give Google a brief window to report auth failures before treating as success.
+                    setTimeout(resolveOnce, 400);
+                }).catch((err) => {
+                    rejectOnce(err.message || 'Google Places initialization failed');
+                });
             };
-            script.onerror = () => reject(new Error('Google Maps script failed to load'));
+
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&libraries=places&loading=async&callback=${callbackName}`;
+            script.async = true;
+            script.onerror = () => rejectOnce('Google Maps script failed to load');
 
             document.head.appendChild(script);
         });
     }
 
-    function initGoogleAutocomplete() {
-        const autocomplete = new google.maps.places.Autocomplete(addressInput, {
+    async function initGoogleAutocomplete() {
+        if (google.maps.importLibrary) {
+            await google.maps.importLibrary('places');
+        }
+        const AutocompleteCtor = google.maps?.places?.Autocomplete;
+        if (!AutocompleteCtor) {
+            throw new Error('Google Places Autocomplete is unavailable');
+        }
+
+        const autocomplete = new AutocompleteCtor(addressInput, {
             componentRestrictions: { country: 'us' },
             fields: ['address_components', 'formatted_address'],
             types: ['address'],
@@ -287,4 +335,3 @@
         return d.innerHTML;
     }
 })();
-
