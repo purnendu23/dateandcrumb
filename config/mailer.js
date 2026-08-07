@@ -42,12 +42,12 @@ async function sendVerificationEmail(toEmail, token, baseUrl) {
     const verifyUrl = `${baseUrl}/api/auth/verify?token=${encodeURIComponent(token)}`;
 
     const info = await transport.sendMail({
-        from: process.env.SMTP_FROM || '"Bakehouse" <noreply@bakehouse.com>',
+        from: process.env.SMTP_FROM || '"Date&Crumb" <noreply@dateandcrumb.com>',
         to: toEmail,
-        subject: 'Verify your Bakehouse account',
+        subject: 'Verify your Date&Crumb account',
         html: `
             <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 2rem;">
-                <h2 style="color: #8b4513;">Welcome to Bakehouse!</h2>
+                <h2 style="color: #8b4513;">Welcome to Date&Crumb!</h2>
                 <p>Thanks for signing up. Please verify your email address by clicking the button below:</p>
                 <a href="${verifyUrl}" style="display: inline-block; background: #b5651d; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 1rem 0;">Verify Email</a>
                 <p style="color: #666; font-size: 0.9rem;">Or copy this link into your browser:<br>${verifyUrl}</p>
