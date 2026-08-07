@@ -956,8 +956,8 @@ header {
     margin-top: 0.3rem;
 }
 
-/* --- PayPal --- */
-.paypal-info {
+/* --- Wallet (Google Pay / Apple Pay) --- */
+.wallet-info {
     color: var(--color-text-light);
     font-size: 0.9rem;
     padding: 1rem;
@@ -965,7 +965,8 @@ header {
     border-radius: var(--radius);
     text-align: center;
 }
-#paypal-button-container {
+#wallet-payment-request-btn,
+#wallet-place-order-btn {
     min-height: 50px;
 }
 
