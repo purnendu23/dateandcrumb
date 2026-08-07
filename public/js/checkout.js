@@ -158,14 +158,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ─── Fetch payment config ────────────────────────────
     let stripePublicKey = null;
-    let paypalClientId = null;
     let stripe = null;
 
     try {
         const configRes = await fetch('/api/payments/config');
         const config = await configRes.json();
         stripePublicKey = config.stripePublicKey;
-        paypalClientId = config.paypalClientId;
     } catch (e) {
         console.error('Failed to load payment config:', e);
     }
@@ -219,15 +217,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         cardMounted = true;
     }
 
-    // ─── Show PayPal option if configured & load SDK ─────
-    let paypalSDKReady = false;
-    if (paypalClientId) {
-        document.getElementById('paypal-method-option').style.display = '';
-        const ppScript = document.createElement('script');
-        ppScript.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(paypalClientId)}&currency=USD`;
-        ppScript.async = true;
-        ppScript.onload = () => { paypalSDKReady = true; };
-        document.head.appendChild(ppScript);
+    // ─── Setup Stripe Payment Request (Google Pay / Apple Pay) ─────
+    let paymentRequest = null;
+    let walletAvailable = false;
+
+    if (stripe) {
+        paymentRequest = stripe.paymentRequest({
+            country: 'US',
+            currency: 'usd',
+            total: {
+                label: 'Bakehouse Order',
+                amount: Math.round(Cart.getTotal() * 100),
+            },
+            requestPayerName: false,
+            requestPayerEmail: false,
+        });
+
+        // Check if Google Pay or Apple Pay is available
+        paymentRequest.canMakePayment().then(result => {
+            walletAvailable = !!result;
+            if (!result) {
+                // Hide wallet options if neither is available
+                const gpayOpt = document.querySelector('[data-method="google_pay"]');
+                const apayOpt = document.querySelector('[data-method="apple_pay"]');
+                if (gpayOpt) gpayOpt.style.display = 'none';
+                if (apayOpt) apayOpt.style.display = 'none';
+            } else {
+                // Show only available wallets
+                if (!result.googlePay) {
+                    const gpayOpt = document.querySelector('[data-method="google_pay"]');
+                    if (gpayOpt) gpayOpt.style.display = 'none';
+                }
+                if (!result.applePay) {
+                    const apayOpt = document.querySelector('[data-method="apple_pay"]');
+                    if (apayOpt) apayOpt.style.display = 'none';
+                }
+            }
+        });
+    } else {
+        // Stripe not configured — hide wallet options
+        const gpayOpt = document.querySelector('[data-method="google_pay"]');
+        const apayOpt = document.querySelector('[data-method="apple_pay"]');
+        if (gpayOpt) gpayOpt.style.display = 'none';
+        if (apayOpt) apayOpt.style.display = 'none';
     }
 
     // ─── Step navigation ─────────────────────────────────
@@ -367,8 +399,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             radio.closest('.payment-method').classList.add('selected');
             selectedMethod = radio.value;
 
+            const isWallet = selectedMethod === 'google_pay' || selectedMethod === 'apple_pay';
             document.getElementById('stripe-card-section').style.display = selectedMethod === 'stripe' ? '' : 'none';
-            document.getElementById('paypal-section').style.display = selectedMethod === 'paypal' ? '' : 'none';
+            document.getElementById('wallet-section').style.display = isWallet ? '' : 'none';
+
+            // Show wallet availability message
+            if (isWallet) {
+                const unavailableMsg = document.getElementById('wallet-unavailable');
+                const btnContainer = document.getElementById('wallet-payment-request-btn');
+                if (!walletAvailable) {
+                    unavailableMsg.style.display = '';
+                    btnContainer.style.display = 'none';
+                } else {
+                    unavailableMsg.style.display = 'none';
+                    btnContainer.style.display = '';
+                }
+            }
         });
     });
 
@@ -377,8 +423,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const errEl = document.getElementById('payment-error');
         errEl.style.display = 'none';
 
+        const isWallet = selectedMethod === 'google_pay' || selectedMethod === 'apple_pay';
+
         if (selectedMethod === 'stripe' && !stripe) {
             errEl.textContent = 'Stripe is not available. Please select another payment method.';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        if (isWallet && !walletAvailable) {
+            errEl.textContent = 'This wallet is not available on your device. Please select another payment method.';
             errEl.style.display = 'block';
             return;
         }
@@ -393,81 +447,93 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         // Populate review — payment
-        document.getElementById('review-payment').innerHTML = selectedMethod === 'stripe'
-            ? '<p>💳 Credit / Debit Card (Stripe)</p>'
-            : '<p>🅿️ PayPal</p>';
+        const paymentLabels = {
+            stripe: '<p>💳 Credit / Debit Card (Stripe)</p>',
+            google_pay: '<p>🟢 Google Pay</p>',
+            apple_pay: '<p>🍎 Apple Pay</p>',
+        };
+        document.getElementById('review-payment').innerHTML = paymentLabels[selectedMethod] || '';
 
         // Show the right place-order section
         document.getElementById('stripe-place-order').style.display = selectedMethod === 'stripe' ? '' : 'none';
-        document.getElementById('paypal-place-order').style.display = selectedMethod === 'paypal' ? '' : 'none';
+        document.getElementById('wallet-place-order').style.display = isWallet ? '' : 'none';
 
         goToStep(2);
 
-        // Initialize PayPal buttons on step 3 if needed
-        if (selectedMethod === 'paypal' && paypalClientId) {
-            const container = document.getElementById('paypal-button-container');
-            container.innerHTML = '<p style="text-align:center; color:var(--color-text-light);">Loading PayPal…</p>';
+        // Mount Stripe Payment Request Button for wallet payments on step 3
+        if (isWallet && paymentRequest && stripe) {
+            const container = document.getElementById('wallet-place-order-btn');
+            container.innerHTML = '';
 
-            // Wait for SDK to load (up to 10s)
-            const waitForSDK = () => new Promise((resolve) => {
-                if (window.paypal) return resolve(true);
-                let elapsed = 0;
-                const interval = setInterval(() => {
-                    elapsed += 200;
-                    if (window.paypal) { clearInterval(interval); resolve(true); }
-                    else if (elapsed >= 10000) { clearInterval(interval); resolve(false); }
-                }, 200);
+            // Update the payment request amount
+            paymentRequest.update({
+                total: {
+                    label: 'Bakehouse Order',
+                    amount: Math.round(Cart.getTotal() * 100),
+                },
             });
 
-            const sdkLoaded = await waitForSDK();
-            if (!sdkLoaded) {
-                container.innerHTML = '<p style="color:#c00;">Failed to load PayPal. Please refresh and try again.</p>';
-            } else {
-                container.innerHTML = '';
-                window.paypal.Buttons({
-                    createOrder: async () => {
-                        const res = await fetch('/api/payments/paypal/create-order', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity })) }),
-                        });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.error);
-                        return data.id;
-                    },
-                    onApprove: async (data) => {
-                        try {
-                            const captureRes = await fetch('/api/payments/paypal/capture-order', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ orderID: data.orderID }),
-                            });
-                            const captureData = await captureRes.json();
-                            if (captureData.status === 'COMPLETED') {
-                                await placeOrder('paypal', captureData.id);
-                            } else {
-                                console.error('PayPal capture response:', captureData);
-                                showCheckoutError('PayPal payment was not completed. Please try again.');
-                            }
-                        } catch (err) {
-                            console.error('PayPal capture error:', err);
-                            showCheckoutError('Failed to capture PayPal payment. Please try again.');
+            const prButton = stripeElements.create('paymentRequestButton', {
+                paymentRequest: paymentRequest,
+            });
+            prButton.mount('#wallet-place-order-btn');
+
+            // Handle payment method from wallet
+            paymentRequest.on('paymentmethod', async (ev) => {
+                try {
+                    // Create PaymentIntent on server
+                    const intentRes = await fetch('/api/payments/stripe/create-intent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity })) }),
+                    });
+                    const intentData = await intentRes.json();
+                    if (!intentRes.ok) {
+                        ev.complete('fail');
+                        showCheckoutError(intentData.error || 'Failed to initialize payment.');
+                        return;
+                    }
+
+                    // Confirm the payment with the wallet payment method
+                    const { error, paymentIntent } = await stripe.confirmCardPayment(
+                        intentData.clientSecret,
+                        { payment_method: ev.paymentMethod.id },
+                        { handleActions: false }
+                    );
+
+                    if (error) {
+                        ev.complete('fail');
+                        showCheckoutError(error.message);
+                        return;
+                    }
+
+                    ev.complete('success');
+
+                    if (paymentIntent.status === 'requires_action') {
+                        const { error: actionError, paymentIntent: confirmedIntent } = await stripe.confirmCardPayment(intentData.clientSecret);
+                        if (actionError) {
+                            showCheckoutError(actionError.message);
+                            return;
                         }
-                    },
-                    onError: (err) => {
-                        console.error('PayPal error:', err);
-                        showCheckoutError('PayPal encountered an error. Please try again.');
-                    },
-                }).render('#paypal-button-container');
-            }
+                        await placeOrder(selectedMethod, confirmedIntent.id);
+                    } else if (paymentIntent.status === 'succeeded') {
+                        await placeOrder(selectedMethod, paymentIntent.id);
+                    } else {
+                        showCheckoutError('Payment was not completed. Please try again.');
+                    }
+                } catch (err) {
+                    ev.complete('fail');
+                    showCheckoutError('Network error. Please check your connection and try again.');
+                }
+            });
         }
     });
 
     // Back buttons
     document.getElementById('btn-back-shipping').addEventListener('click', () => goToStep(0));
     document.getElementById('btn-back-payment').addEventListener('click', () => goToStep(1));
-    const backPayPalBtn = document.getElementById('btn-back-payment-pp');
-    if (backPayPalBtn) backPayPalBtn.addEventListener('click', () => goToStep(1));
+    const backWalletBtn = document.getElementById('btn-back-payment-wallet');
+    if (backWalletBtn) backWalletBtn.addEventListener('click', () => goToStep(1));
 
     // ─── Stripe: Place Order (form submit) ───────────────
     form.addEventListener('submit', async (e) => {
