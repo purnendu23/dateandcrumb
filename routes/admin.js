@@ -105,7 +105,9 @@ router.patch('/orders/:id/tracking', async (req, res) => {
 // GET /api/admin/users
 router.get('/users', async (req, res) => {
     const db = req.app.locals.db;
-    const [users] = await db.execute('SELECT id, email, name, provider, verified, is_admin, created_at FROM users ORDER BY created_at DESC');
+    const [users] = await db.execute(
+        'SELECT id, email, first_name, last_name, name, provider, verified, is_admin, created_at FROM users ORDER BY created_at DESC'
+    );
     res.json(users);
 });
 

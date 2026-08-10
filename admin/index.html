@@ -187,10 +187,11 @@
                 <thead><tr><th>ID</th><th>Customer</th><th>Email</th><th>Phone</th><th>Address</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking #</th><th>Carrier</th><th>Date</th><th></th></tr></thead>
                 <tbody>${orders.map(o => {
                     const statusLabel = o.status === 'ready_to_ship' ? 'Ready to Ship' : o.status;
+                    const orderCustomerName = `${o.customer_first_name || ''} ${o.customer_last_name || ''}`.trim() || o.customer_name || '—';
                     return `
                     <tr>
                         <td>#${o.id}</td>
-                        <td>${esc(o.customer_name)}</td>
+                        <td>${esc(orderCustomerName)}</td>
                         <td>${esc(o.customer_email)}</td>
                         <td>${o.customer_phone ? esc(o.customer_phone) : '—'}</td>
                         <td>${esc(o.shipping_address)}, ${esc(o.shipping_city)} ${esc(o.shipping_zip)}</td>
@@ -314,7 +315,7 @@
                 <tbody>${users.map(u => `
                     <tr>
                         <td>${u.id}</td>
-                        <td>${esc(u.name || '—')}</td>
+                        <td>${esc((`${u.first_name || ''} ${u.last_name || ''}`).trim() || u.name || '—')}</td>
                         <td>${esc(u.email)}</td>
                         <td>${esc(u.provider)}</td>
                         <td class="${u.verified ? 'verified-yes' : 'verified-no'}">${u.verified ? 'Yes' : 'No'}</td>

@@ -34,11 +34,36 @@ async function runMigrations() {
                 await conn.execute(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
             }
         };
+        const addUniqueIndexIfNotExists = async (table, indexName, ddl) => {
+            const [rows] = await conn.execute(
+                `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?`,
+                [table, indexName]
+            );
+            if (rows[0].cnt === 0) {
+                await conn.execute(ddl);
+            }
+        };
 
         await addColumnIfNotExists('users', 'reset_token', 'VARCHAR(255)');
         await addColumnIfNotExists('users', 'reset_token_expires', 'DATETIME');
+        await addColumnIfNotExists('users', 'first_name', 'VARCHAR(100) NULL AFTER email');
+        await addColumnIfNotExists('users', 'last_name', 'VARCHAR(100) NULL AFTER first_name');
         await addColumnIfNotExists('products', 'ingredients', 'TEXT');
         await addColumnIfNotExists('products', 'nutritional_info', 'TEXT');
+        await addColumnIfNotExists('address_book', 'first_name', 'VARCHAR(100) NULL AFTER label');
+        await addColumnIfNotExists('address_book', 'last_name', 'VARCHAR(100) NULL AFTER first_name');
+        await addColumnIfNotExists('orders', 'customer_first_name', 'VARCHAR(100) NULL AFTER customer_name');
+        await addColumnIfNotExists('orders', 'customer_last_name', 'VARCHAR(100) NULL AFTER customer_first_name');
+        await addColumnIfNotExists('orders', 'shipping_address2', 'VARCHAR(255) NULL AFTER shipping_address');
+        await addColumnIfNotExists('orders', 'shipping_state', 'VARCHAR(2) NULL AFTER shipping_city');
+        await addColumnIfNotExists('orders', 'subtotal', 'DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER shipping_zip');
+        await addColumnIfNotExists('orders', 'sales_tax', 'DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER subtotal');
+        await addColumnIfNotExists('orders', 'tax_calculation_id', 'VARCHAR(255) NULL AFTER sales_tax');
+        await addUniqueIndexIfNotExists(
+            'orders',
+            'ux_orders_payment_id',
+            'CREATE UNIQUE INDEX ux_orders_payment_id ON orders(payment_id)'
+        );
 
         await conn.execute(`CREATE TABLE IF NOT EXISTS validated_addresses (
             id INT AUTO_INCREMENT PRIMARY KEY,

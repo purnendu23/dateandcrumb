@@ -93,7 +93,6 @@
 
             const firstName = document.getElementById('first-name').value.trim();
             const lastName = document.getElementById('last-name').value.trim();
-            const name = [firstName, lastName].filter(Boolean).join(' ');
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
@@ -101,7 +100,12 @@
                 const res = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, password }),
+                    body: JSON.stringify({
+                        first_name: firstName,
+                        last_name: lastName,
+                        email,
+                        password,
+                    }),
                 });
                 const data = await res.json();
 

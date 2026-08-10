@@ -2,6 +2,10 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const bcrypt = require('bcrypt');
+const buildFullName = (firstName, lastName) => {
+    const full = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
+    return full || null;
+};
 
 module.exports = function (db) {
     // Serialize user ID into session
@@ -12,7 +16,10 @@ module.exports = function (db) {
     // Deserialize user from session
     passport.deserializeUser(async (id, done) => {
         try {
-            const [rows] = await db.execute('SELECT id, email, name, provider, is_admin FROM users WHERE id = ?', [id]);
+            const [rows] = await db.execute(
+                'SELECT id, email, first_name, last_name, name, provider, is_admin FROM users WHERE id = ?',
+                [id]
+            );
             done(null, rows[0] || null);
         } catch (err) {
             done(err, null);
@@ -32,7 +39,13 @@ module.exports = function (db) {
 
                 const match = await bcrypt.compare(password, user.password_hash);
                 if (!match) return done(null, false, { message: 'Invalid email or password.' });
-                return done(null, { id: user.id, email: user.email, name: user.name });
+                return done(null, {
+                    id: user.id,
+                    email: user.email,
+                    first_name: user.first_name || null,
+                    last_name: user.last_name || null,
+                    name: user.name || buildFullName(user.first_name, user.last_name),
+                });
             } catch (err) {
                 return done(err);
             }
@@ -60,14 +73,23 @@ module.exports = function (db) {
                         if (user) {
                             await db.execute('UPDATE users SET provider = ?, provider_id = ? WHERE id = ?', ['google', profile.id, user.id]);
                         } else {
+                            const firstName = profile.name?.givenName || null;
+                            const lastName = profile.name?.familyName || null;
+                            const fullName = buildFullName(firstName, lastName) || profile.displayName || null;
                             const [result] = await db.execute(
-                                'INSERT INTO users (email, name, provider, provider_id) VALUES (?, ?, ?, ?)',
-                                [email, profile.displayName, 'google', profile.id]
+                                'INSERT INTO users (email, first_name, last_name, name, provider, provider_id) VALUES (?, ?, ?, ?, ?, ?)',
+                                [email, firstName, lastName, fullName, 'google', profile.id]
                             );
-                            user = { id: result.insertId, email, name: profile.displayName };
+                            user = { id: result.insertId, email, first_name: firstName, last_name: lastName, name: fullName };
                         }
                     }
-                    return done(null, { id: user.id, email: user.email, name: user.name });
+                    return done(null, {
+                        id: user.id,
+                        email: user.email,
+                        first_name: user.first_name || null,
+                        last_name: user.last_name || null,
+                        name: user.name || buildFullName(user.first_name, user.last_name),
+                    });
                 } catch (err) {
                     return done(err);
                 }
@@ -104,15 +126,23 @@ module.exports = function (db) {
                             if (user) {
                                 await db.execute('UPDATE users SET provider = ?, provider_id = ? WHERE id = ?', ['apple', profile.id, user.id]);
                             } else {
-                                const name = profile.name ? `${profile.name.firstName || ''} ${profile.name.lastName || ''}`.trim() : null;
+                                const firstName = profile.name?.firstName || null;
+                                const lastName = profile.name?.lastName || null;
+                                const fullName = buildFullName(firstName, lastName);
                                 const [result] = await db.execute(
-                                    'INSERT INTO users (email, name, provider, provider_id) VALUES (?, ?, ?, ?)',
-                                    [email, name, 'apple', profile.id]
+                                    'INSERT INTO users (email, first_name, last_name, name, provider, provider_id) VALUES (?, ?, ?, ?, ?, ?)',
+                                    [email, firstName, lastName, fullName, 'apple', profile.id]
                                 );
-                                user = { id: result.insertId, email, name };
+                                user = { id: result.insertId, email, first_name: firstName, last_name: lastName, name: fullName };
                             }
                         }
-                        return done(null, { id: user.id, email: user.email, name: user.name });
+                        return done(null, {
+                            id: user.id,
+                            email: user.email,
+                            first_name: user.first_name || null,
+                            last_name: user.last_name || null,
+                            name: user.name || buildFullName(user.first_name, user.last_name),
+                        });
                     } catch (err) {
                         return done(err);
                     }

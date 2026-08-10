@@ -6,11 +6,27 @@ const { sendVerificationEmail } = require('../config/mailer');
 const router = express.Router();
 
 const SALT_ROUNDS = 12;
+const buildFullName = (firstName, lastName) => {
+    const full = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
+    return full || null;
+};
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
     const db = req.app.locals.db;
-    const { email, password, name, phone, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip } = req.body;
+    const {
+        email,
+        password,
+        first_name,
+        last_name,
+        name,
+        phone,
+        shipping_address,
+        shipping_address2,
+        shipping_city,
+        shipping_state,
+        shipping_zip,
+    } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required.' });
@@ -24,12 +40,15 @@ router.post('/register', async (req, res) => {
     try {
         const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
         const token = crypto.randomBytes(32).toString('hex');
+        const normalizedFirstName = String(first_name || '').trim() || null;
+        const normalizedLastName = String(last_name || '').trim() || null;
+        const fullName = buildFullName(normalizedFirstName, normalizedLastName) || (String(name || '').trim() || null);
 
         const [result] = await db.execute(
-            `INSERT INTO users (email, password_hash, name, provider, verified, verification_token,
+            `INSERT INTO users (email, first_name, last_name, password_hash, name, provider, verified, verification_token,
              phone, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip)
-             VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
-            [email, passwordHash, name || null, 'local', token,
+             VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
+            [email, normalizedFirstName, normalizedLastName, passwordHash, fullName, 'local', token,
              phone || null, shipping_address || null, shipping_address2 || null,
              shipping_city || null, shipping_state || null, shipping_zip || null]
         );
@@ -38,8 +57,8 @@ router.post('/register', async (req, res) => {
         if (shipping_address && shipping_city && shipping_zip) {
             const newUserId = result.insertId;
             await db.execute(
-                'INSERT INTO address_book (user_id, label, name, phone, address, address2, city, state, zip, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
-                [newUserId, 'Profile Address', name || null, phone || null,
+                'INSERT INTO address_book (user_id, label, first_name, last_name, name, phone, address, address2, city, state, zip, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+                [newUserId, 'Profile Address', normalizedFirstName, normalizedLastName, fullName, phone || null,
                  shipping_address, shipping_address2 || null, shipping_city, shipping_state || null, shipping_zip]
             );
         }
@@ -71,7 +90,7 @@ router.get('/verify', async (req, res) => {
         return res.redirect('/verify.html?status=error&message=Missing+token');
     }
 
-    const [rows] = await db.execute('SELECT id, email, name, verified FROM users WHERE verification_token = ?', [token]);
+    const [rows] = await db.execute('SELECT id, email, first_name, last_name, name, verified FROM users WHERE verification_token = ?', [token]);
     const user = rows[0];
 
     if (!user) {
@@ -84,7 +103,13 @@ router.get('/verify', async (req, res) => {
 
     await db.execute('UPDATE users SET verified = 1, verification_token = NULL WHERE id = ?', [user.id]);
 
-    req.login({ id: user.id, email: user.email, name: user.name }, (err) => {
+    req.login({
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        name: user.name || buildFullName(user.first_name, user.last_name),
+    }, (err) => {
         if (err) {
             return res.redirect('/verify.html?status=success');
         }
@@ -99,8 +124,16 @@ router.post('/login', (req, res, next) => {
         if (!user) return res.status(401).json({ error: info?.message || 'Invalid email or password.' });
         req.login(user, (err) => {
             if (err) return res.status(500).json({ error: 'Login failed.' });
-            res.json({ user: { id: user.id, email: user.email, name: user.name } });
-        });
+                res.json({
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                        first_name: user.first_name || null,
+                        last_name: user.last_name || null,
+                        name: user.name || buildFullName(user.first_name, user.last_name),
+                    },
+                });
+            });
     })(req, res, next);
 });
 
@@ -114,7 +147,16 @@ router.post('/logout', (req, res) => {
 // GET /api/auth/me
 router.get('/me', (req, res) => {
     if (req.isAuthenticated()) {
-        res.json({ user: { id: req.user.id, email: req.user.email, name: req.user.name, is_admin: req.user.is_admin } });
+        res.json({
+            user: {
+                id: req.user.id,
+                email: req.user.email,
+                first_name: req.user.first_name || null,
+                last_name: req.user.last_name || null,
+                name: req.user.name || buildFullName(req.user.first_name, req.user.last_name),
+                is_admin: req.user.is_admin,
+            },
+        });
     } else {
         res.json({ user: null });
     }
@@ -127,7 +169,9 @@ router.get('/profile', async (req, res) => {
     }
     const db = req.app.locals.db;
     const [rows] = await db.execute(
-        'SELECT id, email, name, phone, organization, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip FROM users WHERE id = ?',
+        `SELECT id, email, first_name, last_name, name, phone, organization,
+                shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip
+         FROM users WHERE id = ?`,
         [req.user.id]
     );
 
@@ -141,20 +185,38 @@ router.put('/profile', async (req, res) => {
         return res.status(401).json({ error: 'Not logged in.' });
     }
     const db = req.app.locals.db;
-    const { name, phone, organization, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip } = req.body;
+    const {
+        first_name,
+        last_name,
+        name,
+        phone,
+        organization,
+        shipping_address,
+        shipping_address2,
+        shipping_city,
+        shipping_state,
+        shipping_zip,
+    } = req.body;
+    const normalizedFirstName = String(first_name || '').trim() || null;
+    const normalizedLastName = String(last_name || '').trim() || null;
+    const fullName = buildFullName(normalizedFirstName, normalizedLastName) || (String(name || '').trim() || null);
 
     if (phone !== undefined) {
         await db.execute(
-            `UPDATE users SET name = COALESCE(?, name), phone = ?, organization = ?, shipping_address = ?, shipping_address2 = ?,
-             shipping_city = ?, shipping_state = ?, shipping_zip = ? WHERE id = ?`,
-            [name || null, phone || null, organization || null, shipping_address || null, shipping_address2 || null,
+            `UPDATE users
+             SET first_name = ?, last_name = ?, name = ?, phone = ?, organization = ?,
+                shipping_address = ?, shipping_address2 = ?, shipping_city = ?, shipping_state = ?, shipping_zip = ?
+             WHERE id = ?`,
+            [normalizedFirstName, normalizedLastName, fullName, phone || null, organization || null, shipping_address || null, shipping_address2 || null,
              shipping_city || null, shipping_state || null, shipping_zip || null, req.user.id]
         );
     } else {
         await db.execute(
-            `UPDATE users SET name = COALESCE(?, name), organization = ?, shipping_address = ?, shipping_address2 = ?,
-             shipping_city = ?, shipping_state = ?, shipping_zip = ? WHERE id = ?`,
-            [name || null, organization || null, shipping_address || null, shipping_address2 || null,
+            `UPDATE users
+             SET first_name = ?, last_name = ?, name = ?, organization = ?,
+                shipping_address = ?, shipping_address2 = ?, shipping_city = ?, shipping_state = ?, shipping_zip = ?
+             WHERE id = ?`,
+            [normalizedFirstName, normalizedLastName, fullName, organization || null, shipping_address || null, shipping_address2 || null,
              shipping_city || null, shipping_state || null, shipping_zip || null, req.user.id]
         );
     }
@@ -272,7 +334,7 @@ router.post('/addresses', async (req, res) => {
         return res.status(401).json({ error: 'Not logged in.' });
     }
     const db = req.app.locals.db;
-    const { label, name, phone, address, address2, city, state, zip } = req.body;
+    const { label, first_name, last_name, name, phone, address, address2, city, state, zip } = req.body;
     if (!address || !city || !zip) {
         return res.status(400).json({ error: 'Address, city, and zip are required.' });
     }
@@ -283,9 +345,14 @@ router.post('/addresses', async (req, res) => {
     if (existing.length > 0) {
         return res.json({ message: 'Address already in address book.', id: existing[0].id });
     }
+    const normalizedFirstName = String(first_name || '').trim() || null;
+    const normalizedLastName = String(last_name || '').trim() || null;
+    const fullName = buildFullName(normalizedFirstName, normalizedLastName) || (String(name || '').trim() || null);
     const [result] = await db.execute(
-        'INSERT INTO address_book (user_id, label, name, phone, address, address2, city, state, zip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [req.user.id, label || null, name || null, phone || null, address, address2 || null, city, state || null, zip]
+        `INSERT INTO address_book (
+            user_id, label, first_name, last_name, name, phone, address, address2, city, state, zip
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [req.user.id, label || null, normalizedFirstName, normalizedLastName, fullName, phone || null, address, address2 || null, city, state || null, zip]
     );
     res.json({ message: 'Address added.', id: result.insertId });
 });

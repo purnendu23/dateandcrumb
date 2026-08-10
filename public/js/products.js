@@ -32,6 +32,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     function parseImages(product) {
         try { return JSON.parse(product.image_url); } catch (e) { return [product.image_url]; }
     }
+    function syncFlavorInUrl(productName) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('flavor', productName);
+        window.history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`);
+    }
 
     function render() {
         activeImages = parseImages(activeProduct);
@@ -124,6 +129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!pill) return;
             const idx = parseInt(pill.dataset.index, 10);
             activeProduct = products[idx];
+            syncFlavorInUrl(activeProduct.name);
             render();
         });
 

@@ -25,15 +25,23 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     customer_name VARCHAR(255) NOT NULL,
+    customer_first_name VARCHAR(100),
+    customer_last_name VARCHAR(100),
     customer_email VARCHAR(255) NOT NULL,
     customer_phone VARCHAR(50),
     shipping_address TEXT NOT NULL,
+    shipping_address2 VARCHAR(255),
     shipping_city VARCHAR(255) NOT NULL,
+    shipping_state VARCHAR(2),
     shipping_zip VARCHAR(20) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    sales_tax DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    tax_calculation_id VARCHAR(255),
     total DECIMAL(10,2) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'pending',
     payment_method VARCHAR(50),
     payment_id VARCHAR(255),
+    UNIQUE KEY ux_orders_payment_id (payment_id),
     tracking_number VARCHAR(255),
     carrier VARCHAR(255),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -54,6 +62,8 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
     password_hash VARCHAR(255),
     name VARCHAR(255),
     provider VARCHAR(50) NOT NULL DEFAULT 'local',
@@ -85,6 +95,8 @@ CREATE TABLE IF NOT EXISTS address_book (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     label VARCHAR(255),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
     name VARCHAR(255),
     phone VARCHAR(50),
     address TEXT NOT NULL,
@@ -113,4 +125,3 @@ CREATE TABLE IF NOT EXISTS validated_addresses (
     confidence VARCHAR(50),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
-
