@@ -18,7 +18,7 @@ async function seed() {
         port: parseInt(process.env.DB_PORT, 10) || 3306,
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'bakehouse',
+        database: process.env.DB_NAME || 'dateandcrumb',
         waitForConnections: true,
         connectionLimit: 5,
         multipleStatements: true,
@@ -62,9 +62,18 @@ async function seed() {
         if (adminUsers.length > 0) {
             for (const u of adminUsers) {
                 await conn.execute(
-                    `INSERT INTO users (id, email, password_hash, name, provider, provider_id, verified, verification_token, reset_token, reset_token_expires, is_admin, phone, organization, shipping_address, shipping_address2, shipping_city, shipping_state, shipping_zip, created_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [u.id, u.email, u.password_hash, u.name, u.provider, u.provider_id, u.verified, u.verification_token, u.reset_token || null, u.reset_token_expires || null, u.is_admin, u.phone, u.organization, u.shipping_address, u.shipping_address2, u.shipping_city, u.shipping_state, u.shipping_zip, u.created_at]
+                    `INSERT INTO users (
+                        id, email, first_name, last_name, password_hash, name, provider, provider_id,
+                        verified, verification_token, reset_token, reset_token_expires, is_admin, phone,
+                        organization, shipping_address, shipping_address2, shipping_city, shipping_state,
+                        shipping_zip, created_at
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        u.id, u.email, u.first_name || null, u.last_name || null, u.password_hash, u.name,
+                        u.provider, u.provider_id, u.verified, u.verification_token, u.reset_token || null,
+                        u.reset_token_expires || null, u.is_admin, u.phone, u.organization, u.shipping_address,
+                        u.shipping_address2, u.shipping_city, u.shipping_state, u.shipping_zip, u.created_at
+                    ]
                 );
             }
             console.log(`  - ${adminUsers.length} admin user(s) preserved`);
