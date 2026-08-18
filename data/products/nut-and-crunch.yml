@@ -1,0 +1,28 @@
+name: Nut-n-Crunch Bite
+description: >
+  A rich, nutty date-sweetened snack with almonds, pistachios, edible gum, roasted gram flour, and warm cardamom.
+price: 3.50
+category: Healthy Bars
+featured: true
+
+images:
+  - /images/nut-and-crunch/front_picture.png
+  - /images/nut-and-crunch/nakpic_1.png
+  - /images/nut-and-crunch/ingredients_picture.png
+  - /images/nut-and-crunch/nutrition.png
+
+ingredients: >
+  Dates, roasted gram flour, almond butter, ghee, edible gum, pistachios, cardamom
+
+nutritional_info: |
+  Serving Size: 1 bar (38g)
+  Calories: 170
+  Total Fat: 9g
+  Saturated Fat: 2.5g
+  Cholesterol: 10mg
+  Sodium: 5mg
+  Total Carbohydrates: 18g
+  Dietary Fiber: 5g
+  Total Sugars: 10g
+  Protein: 4g
+

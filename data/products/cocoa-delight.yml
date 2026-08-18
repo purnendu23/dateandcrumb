@@ -1,0 +1,28 @@
+name: Midnight Coco Date
+description: >
+  A rich cocoa snack with dates, pistachios, cardamom, vanilla, roasted bengal gram flour and almond butter.
+price: 4.00
+category: Healthy Bars
+featured: true
+
+images:
+  - /images/cocoa-delight/front_picture.png
+  - /images/cocoa-delight/nakpic_1.png
+  - /images/cocoa-delight/ingredients_picture.png
+  - /images/cocoa-delight/nutrition.png
+
+ingredients: >
+  Dates, roasted gram flour, almond butter, clarified butter, pistachios, cardamom, cocoa, vanilla bean, salt.
+
+nutritional_info: |
+  Serving Size: 1 bar (38g)
+  Calories: 160
+  Total Fat: 9g
+  Saturated Fat: 2.5g
+  Cholesterol: 10mg
+  Sodium: 15mg
+  Total Carbohydrates: 18g
+  Dietary Fiber: 3g
+  Total Sugars: 11g
+  Protein: 4g
+

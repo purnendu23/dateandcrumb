@@ -1,0 +1,28 @@
+name: Cardamom Rose Delight
+description: >
+  A fragrant, nutty snack with a gentle rose water aroma, perfect alongside evening tea or coffee.
+price: 5.00
+category: Healthy Bars
+featured: true
+
+images:
+  - /images/rose-delight/front_picture.png
+  - /images/rose-delight/nakpic_1.png
+  - /images/rose-delight/ingredients_picture.png
+  - /images/rose-delight/nutrition.png
+
+ingredients: >
+  Dates, roasted gram flour, almond butter, ghee, pistachios, cardamom, rose water
+
+nutritional_info: |
+  Serving Size: 1 bar (38g)
+  Calories: 185
+  Total Fat: 11g
+  Saturated Fat: 2.5g
+  Cholesterol: 10mg
+  Sodium: 5mg
+  Total Carbohydrates: 17g
+  Dietary Fiber: 3g
+  Total Sugars: 10g
+  Protein: 4g
+
