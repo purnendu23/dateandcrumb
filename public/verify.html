@@ -51,8 +51,10 @@
 
         if (status === 'success') {
             content.innerHTML = `
-                <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
-                <h2 class="auth-title">Email Verified!</h2>
+                <h2 class="auth-title" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <img src="/images/logo/success-logo.png" alt="Success" style="height: 36px; width: auto;">
+                    Email Verified!
+                </h2>
                 <p style="color: var(--color-text-light); margin: 1rem 0;">Your account has been verified. You can now log in.</p>
                 <a href="/login.html" class="btn btn-primary">Log In</a>
             `;

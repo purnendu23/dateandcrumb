@@ -29,8 +29,10 @@
             <div class="container">
                 <div class="checkout-form" style="margin: 0 auto;">
                     <div style="text-align: center; margin-bottom: 2rem;">
-                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
-                        <h2 class="auth-title">Email Verified!</h2>
+                        <h2 class="auth-title" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <img src="/images/logo/success-logo.png" alt="Success" style="height: 36px; width: auto;">
+                            Email Verified!
+                        </h2>
                         <p style="color: var(--color-text-light); margin-top: 0.5rem;">
                             Complete your profile so we can ship orders to you faster.
                         </p>
@@ -42,37 +44,37 @@
                         <h2>Shipping Information</h2>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="profile-first-name">First Name *</label>
-                                <input type="text" id="profile-first-name" name="first_name" required>
+                                <label for="first_name">First Name *</label>
+                                <input type="text" id="first_name" name="first_name" required>
                             </div>
                             <div class="form-group">
-                                <label for="profile-last-name">Last Name *</label>
-                                <input type="text" id="profile-last-name" name="last_name" required>
+                                <label for="last_name">Last Name *</label>
+                                <input type="text" id="last_name" name="last_name" required>
                             </div>
                             <div class="form-group">
-                                <label for="profile-phone">Phone</label>
-                                <input type="tel" id="profile-phone" name="phone" placeholder="(optional)">
+                                <label for="phone">Phone</label>
+                                <input type="tel" id="phone" name="phone" placeholder="(optional)">
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="profile-organization">Organization</label>
-                            <input type="text" id="profile-organization" name="organization" placeholder="Company or organization (optional)">
+                            <label for="organization">Organization</label>
+                            <input type="text" id="organization" name="organization" placeholder="Company or organization (optional)">
                         </div>
                         <div class="form-group">
-                            <label for="profile-address">Address *</label>
-                            <input type="text" id="profile-address" name="shipping_address" required placeholder="Street address, P.O. box">
+                            <label for="shipping_address">Address *</label>
+                            <input type="text" id="shipping_address" name="shipping_address" required placeholder="Street address, P.O. box">
                         </div>
                         <div class="form-group">
-                            <label for="profile-address2">Address Line 2</label>
-                            <input type="text" id="profile-address2" name="shipping_address2" placeholder="Apt, suite, unit, floor (optional)">
+                            <label for="shipping_address2">Address Line 2</label>
+                            <input type="text" id="shipping_address2" name="shipping_address2" placeholder="Apt, suite, unit, floor (optional)">
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="profile-city">City *</label>
-                                <input type="text" id="profile-city" name="shipping_city" required>
+                                <label for="shipping_city">City *</label>
+                                <input type="text" id="shipping_city" name="shipping_city" required>
                             </div>
                             <div class="form-group">
-                                <label for="profile-state">State *</label>
+                                <label for="shipping_state">State *</label>
                                 <select id="shipping_state" name="shipping_state" required>
                                     <option value="">Select state</option>
                                     <option value="AL">Alabama</option>
@@ -129,8 +131,8 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="profile-zip">ZIP Code *</label>
-                                <input type="text" id="profile-zip" name="shipping_zip" required>
+                                <label for="shipping_zip">ZIP Code *</label>
+                                <input type="text" id="shipping_zip" name="shipping_zip" required>
                             </div>
                         </div>
 
@@ -142,8 +144,10 @@
 
                     <!-- Success state (hidden initially) -->
                     <div id="profile-success" style="display:none; text-align: center;">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
-                        <h2 class="auth-title">You're All Set!</h2>
+                        <h2 class="auth-title" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <img src="/images/logo/success-logo.png" alt="Success" style="height: 36px; width: auto;">
+                            You're All Set!
+                        </h2>
                         <p style="color: var(--color-text-light); margin: 1rem 0;">
                             Your profile has been saved. You're ready to start shopping!
                         </p>
@@ -161,6 +165,8 @@
     </footer>
 
     <script src="/js/cart.js"></script>
+    <script src="/js/address-autocomplete.js"></script>
+    <script src="/js/phone-format.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const form = document.getElementById('profile-form');
@@ -172,15 +178,15 @@
                 const res = await fetch('/api/auth/profile');
                 if (res.ok) {
                     const { profile } = await res.json();
-                    if (profile.first_name) document.getElementById('profile-first-name').value = profile.first_name;
-                    if (profile.last_name) document.getElementById('profile-last-name').value = profile.last_name;
-                    if (profile.phone) document.getElementById('profile-phone').value = profile.phone;
-                    if (profile.organization) document.getElementById('profile-organization').value = profile.organization;
-                    if (profile.shipping_address) document.getElementById('profile-address').value = profile.shipping_address;
-                    if (profile.shipping_address2) document.getElementById('profile-address2').value = profile.shipping_address2;
-                    if (profile.shipping_city) document.getElementById('profile-city').value = profile.shipping_city;
-                    if (profile.shipping_state) document.getElementById('profile-state').value = profile.shipping_state;
-                    if (profile.shipping_zip) document.getElementById('profile-zip').value = profile.shipping_zip;
+                    if (profile.first_name) document.getElementById('first_name').value = profile.first_name;
+                    if (profile.last_name) document.getElementById('last_name').value = profile.last_name;
+                    if (profile.phone) document.getElementById('phone').value = profile.phone;
+                    if (profile.organization) document.getElementById('organization').value = profile.organization;
+                    if (profile.shipping_address) document.getElementById('shipping_address').value = profile.shipping_address;
+                    if (profile.shipping_address2) document.getElementById('shipping_address2').value = profile.shipping_address2;
+                    if (profile.shipping_city) document.getElementById('shipping_city').value = profile.shipping_city;
+                    if (profile.shipping_state) document.getElementById('shipping_state').value = profile.shipping_state;
+                    if (profile.shipping_zip) document.getElementById('shipping_zip').value = profile.shipping_zip;
                 } else {
                     // Not logged in — redirect to login
                     window.location.href = '/login.html';
@@ -194,12 +200,12 @@
                 e.preventDefault();
                 errorDiv.style.display = 'none';
 
-                const first_name = document.getElementById('profile-first-name').value.trim();
-                const last_name = document.getElementById('profile-last-name').value.trim();
-                const address = document.getElementById('profile-address').value.trim();
-                const city = document.getElementById('profile-city').value.trim();
-                const state = document.getElementById('profile-state').value;
-                const zip = document.getElementById('profile-zip').value.trim();
+                const first_name = document.getElementById('first_name').value.trim();
+                const last_name = document.getElementById('last_name').value.trim();
+                const address = document.getElementById('shipping_address').value.trim();
+                const city = document.getElementById('shipping_city').value.trim();
+                const state = document.getElementById('shipping_state').value;
+                const zip = document.getElementById('shipping_zip').value.trim();
 
                 if (!first_name || !last_name || !address || !city || !state || !zip) {
                     errorDiv.textContent = 'Please fill in all required fields.';
@@ -214,10 +220,10 @@
                         body: JSON.stringify({
                             first_name,
                             last_name,
-                            phone: document.getElementById('profile-phone').value.trim(),
-                            organization: document.getElementById('profile-organization').value.trim(),
+                            phone: document.getElementById('phone').value.trim(),
+                            organization: document.getElementById('organization').value.trim(),
                             shipping_address: address,
-                            shipping_address2: document.getElementById('profile-address2').value.trim(),
+                            shipping_address2: document.getElementById('shipping_address2').value.trim(),
                             shipping_city: city,
                             shipping_state: state,
                             shipping_zip: zip,

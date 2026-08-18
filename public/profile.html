@@ -41,40 +41,40 @@
                                 <input type="email" id="profile-email" disabled style="background:#f0f0f0; cursor:not-allowed;">
                             </div>
                             <div class="form-group">
-                                <label for="profile-phone">Phone</label>
-                                <input type="tel" id="profile-phone" disabled style="background:#f0f0f0; cursor:not-allowed;">
+                                <label for="phone">Phone</label>
+                                <input type="tel" id="phone" disabled style="background:#f0f0f0; cursor:not-allowed;">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="profile-first-name">First Name</label>
-                                <input type="text" id="profile-first-name" name="first_name">
+                                <label for="first_name">First Name</label>
+                                <input type="text" id="first_name" name="first_name">
                             </div>
                             <div class="form-group">
-                                <label for="profile-last-name">Last Name</label>
-                                <input type="text" id="profile-last-name" name="last_name">
+                                <label for="last_name">Last Name</label>
+                                <input type="text" id="last_name" name="last_name">
                             </div>
                             <div class="form-group">
-                                <label for="profile-organization">Organization</label>
-                                <input type="text" id="profile-organization" name="organization" placeholder="Company or organization (optional)">
+                                <label for="organization">Organization</label>
+                                <input type="text" id="organization" name="organization" placeholder="Company or organization (optional)">
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="profile-address">Address</label>
-                            <input type="text" id="profile-address" name="shipping_address" placeholder="Street address, P.O. box">
+                            <label for="shipping_address">Address</label>
+                            <input type="text" id="shipping_address" name="shipping_address" placeholder="Street address, P.O. box">
                         </div>
                         <div class="form-group">
-                            <label for="profile-address2">Address Line 2</label>
-                            <input type="text" id="profile-address2" name="shipping_address2" placeholder="Apt, suite, unit, floor (optional)">
+                            <label for="shipping_address2">Address Line 2</label>
+                            <input type="text" id="shipping_address2" name="shipping_address2" placeholder="Apt, suite, unit, floor (optional)">
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="profile-city">City</label>
-                                <input type="text" id="profile-city" name="shipping_city">
+                                <label for="shipping_city">City</label>
+                                <input type="text" id="shipping_city" name="shipping_city">
                             </div>
                             <div class="form-group">
-                                <label for="profile-state">State</label>
-                                <select id="profile-state" name="shipping_state">
+                                <label for="shipping_state">State</label>
+                                <select id="shipping_state" name="shipping_state">
                                     <option value="">Select state</option>
                                     <option value="AL">Alabama</option>
                                     <option value="AK">Alaska</option>
@@ -130,8 +130,8 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="profile-zip">ZIP Code</label>
-                                <input type="text" id="profile-zip" name="shipping_zip">
+                                <label for="shipping_zip">ZIP Code</label>
+                                <input type="text" id="shipping_zip" name="shipping_zip">
                             </div>
                         </div>
 
@@ -152,6 +152,8 @@
 
     <script src="/js/cart.js"></script>
     <script src="/js/auth-nav.js"></script>
+    <script src="/js/address-autocomplete.js"></script>
+    <script src="/js/phone-format.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const form = document.getElementById('profile-form');
@@ -166,15 +168,15 @@
                 }
                 const { profile } = await res.json();
                 document.getElementById('profile-email').value = profile.email || '';
-                document.getElementById('profile-phone').value = profile.phone || '';
-                document.getElementById('profile-first-name').value = profile.first_name || '';
-                document.getElementById('profile-last-name').value = profile.last_name || '';
-                document.getElementById('profile-organization').value = profile.organization || '';
-                document.getElementById('profile-address').value = profile.shipping_address || '';
-                document.getElementById('profile-address2').value = profile.shipping_address2 || '';
-                document.getElementById('profile-city').value = profile.shipping_city || '';
-                document.getElementById('profile-state').value = profile.shipping_state || '';
-                document.getElementById('profile-zip').value = profile.shipping_zip || '';
+                document.getElementById('phone').value = profile.phone || '';
+                document.getElementById('first_name').value = profile.first_name || '';
+                document.getElementById('last_name').value = profile.last_name || '';
+                document.getElementById('organization').value = profile.organization || '';
+                document.getElementById('shipping_address').value = profile.shipping_address || '';
+                document.getElementById('shipping_address2').value = profile.shipping_address2 || '';
+                document.getElementById('shipping_city').value = profile.shipping_city || '';
+                document.getElementById('shipping_state').value = profile.shipping_state || '';
+                document.getElementById('shipping_zip').value = profile.shipping_zip || '';
             } catch (e) {
                 window.location.href = '/login.html';
                 return;
@@ -190,14 +192,14 @@
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            first_name: document.getElementById('profile-first-name').value.trim(),
-                            last_name: document.getElementById('profile-last-name').value.trim(),
-                            organization: document.getElementById('profile-organization').value.trim(),
-                            shipping_address: document.getElementById('profile-address').value.trim(),
-                            shipping_address2: document.getElementById('profile-address2').value.trim(),
-                            shipping_city: document.getElementById('profile-city').value.trim(),
-                            shipping_state: document.getElementById('profile-state').value,
-                            shipping_zip: document.getElementById('profile-zip').value.trim(),
+                            first_name: document.getElementById('first_name').value.trim(),
+                            last_name: document.getElementById('last_name').value.trim(),
+                            organization: document.getElementById('organization').value.trim(),
+                            shipping_address: document.getElementById('shipping_address').value.trim(),
+                            shipping_address2: document.getElementById('shipping_address2').value.trim(),
+                            shipping_city: document.getElementById('shipping_city').value.trim(),
+                            shipping_state: document.getElementById('shipping_state').value,
+                            shipping_zip: document.getElementById('shipping_zip').value.trim(),
                         }),
                     });
                     const data = await res.json();

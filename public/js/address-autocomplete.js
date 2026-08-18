@@ -2,9 +2,9 @@
  * Address Autocomplete — Google Places (primary) with Mapbox fallback
  * Loads dynamically based on available API keys from /api/config
  * Sets window._addressAutoCompleted when user picks a suggestion
+ * Works on any page with shipping_address input field
  */
 (async function () {
-    // Only run on checkout page
     const addressInput = document.getElementById('shipping_address');
     if (!addressInput) return;
 

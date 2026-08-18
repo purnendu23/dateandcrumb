@@ -1,33 +1,5 @@
 /* Checkout page — multi-step: Shipping → Payment → Review → Place Order */
 
-// ─── Phone number auto-format (XXX-XXX-XXXX) ────────────
-document.addEventListener('DOMContentLoaded', () => {
-    const phoneInput = document.getElementById('customer_phone');
-    if (phoneInput) {
-        phoneInput.addEventListener('input', function () {
-            const cursorPos = this.selectionStart;
-            const oldLength = this.value.length;
-            const digits = this.value.replace(/\D/g, '').substring(0, 10);
-            let formatted;
-
-            if (digits.length > 6) {
-                formatted = digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
-            } else if (digits.length > 3) {
-                formatted = digits.slice(0, 3) + '-' + digits.slice(3);
-            } else {
-                formatted = digits;
-            }
-
-            this.value = formatted;
-
-            // Adjust cursor position after inserting dashes.
-            const newLength = this.value.length;
-            const diff = newLength - oldLength;
-            this.setSelectionRange(cursorPos + diff, cursorPos + diff);
-        });
-    }
-});
-
 document.addEventListener('DOMContentLoaded', async () => {
     await Cart._ready;
 

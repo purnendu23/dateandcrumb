@@ -242,9 +242,11 @@
                 </div>
 
                 <div id="order-confirmation" style="display:none;" class="confirmation">
-                    <div class="confirmation-icon">✅</div>
-                    <h2>Thank You for Your Order!</h2>
-                    <p>Your order <strong>#<span id="confirm-order-id"></span></strong> has been placed.</p>
+                    <h2 style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <img src="/images/logo/success-logo.png" alt="Success" style="height: 40px; width: auto;">
+                        Thank You for Your Order!
+                    </h2>
+                    <p>Your order number is <strong><span id="confirm-order-id"></span></strong></p>
                     <p>Total: <strong>$<span id="confirm-total"></span></strong></p>
 
                     <!-- Post-purchase account creation (shown only for guests) -->
@@ -266,8 +268,10 @@
                                 <button type="button" id="btn-skip-signup" class="btn btn-outline" style="width:100%;margin-top:0.5rem;">No thanks</button>
                             </div>
                             <div id="post-signup-success" style="display:none; text-align:center;">
-                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
-                                <p><strong>Account created!</strong></p>
+                                <p style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                    <img src="/images/logo/success-logo.png" alt="Success" style="height: 28px; width: auto;">
+                                    <strong>Account created!</strong>
+                                </p>
                                 <p style="color:var(--color-text-light); font-size:0.9rem;">Check the server terminal for your verification link.</p>
                             </div>
                         </div>
@@ -301,6 +305,7 @@
     <script src="/js/cart.js"></script>
     <script src="/js/auth-nav.js"></script>
     <script src="/js/address-autocomplete.js"></script>
+    <script src="/js/phone-format.js"></script>
     <script src="/js/checkout.js"></script>
 </body>
 </html>
