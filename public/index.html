@@ -35,11 +35,8 @@
                     <a href="/products.html" class="btn btn-primary btn-lg">Shop Snack Bars</a>
                 </div>
                 <div class="hero-poster-right">
-                    <div class="hero-flavour-grid">
-                        <a href="/products.html?flavor=Golden+Pista"><img src="/images/golden-pista/front_picture.png" alt="Golden Pista"></a>
-                        <a href="/products.html?flavor=Nut-n-Crunch+Bite"><img src="/images/nut-n-crunch-bite/front_picture.png" alt="Nut-n-Crunch Bite"></a>
-                        <a href="/products.html?flavor=Midnight+Coco+Date"><img src="/images/midnight-coco-date/front_picture.png" alt="Midnight Coco Date"></a>
-                        <a href="/products.html?flavor=Cardamom+Rose+Delight"><img src="/images/cardamom-rose-delight/front_picture.png" alt="Cardamom Rose Delight"></a>
+                    <div class="hero-flavour-grid" id="hero-flavour-grid">
+                        <!-- Populated dynamically from /api/products -->
                     </div>
                 </div>
             </div>
@@ -122,5 +119,22 @@
     <script src="/js/cart.js"></script>
     <script src="/js/auth-nav.js"></script>
     <script src="/js/app.js"></script>
+    <script>
+        (async function loadHeroProducts() {
+            const grid = document.getElementById('hero-flavour-grid');
+            try {
+                const res = await fetch('/api/products');
+                const products = await res.json();
+                grid.innerHTML = products.map(p => {
+                    const images = JSON.parse(p.image_url || '[]');
+                    const frontImg = images[0] || '';
+                    const flavorParam = encodeURIComponent(p.name);
+                    return `<a href="/products.html?flavor=${flavorParam}"><img src="${frontImg}" alt="${p.name}"></a>`;
+                }).join('');
+            } catch (err) {
+                console.error('Failed to load hero products:', err);
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -97,7 +97,15 @@ async function seed() {
 
         for (const p of products) {
             await conn.execute(
-                'INSERT IGNORE INTO products (name, description, price, image_url, category_id, out_of_stock, featured, ingredients, nutritional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                `INSERT INTO products (name, description, price, image_url, category_id, out_of_stock, featured, ingredients, nutritional_info) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE 
+                    description = VALUES(description),
+                    price = VALUES(price),
+                    image_url = VALUES(image_url),
+                    featured = VALUES(featured),
+                    ingredients = VALUES(ingredients),
+                    nutritional_info = VALUES(nutritional_info)`,
                 [
                     p.name,
                     p.description.trim(),
