@@ -103,9 +103,9 @@ function buildOrderConfirmationEmail(data) {
             <tr>
               <td style="padding:28px 28px 18px 28px; text-align:center;">
                 <img
-                  src="https://www.dateandcrumb.com/images/logo/dc_flat_logo.png"
+                  src="cid:dc_logo"
                   alt="Date &amp; Crumb Bakehouse"
-                  width="160"
+                  width="300"
                   style="display:block; margin:0 auto;"
                 >
               </td>

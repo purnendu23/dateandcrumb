@@ -1,5 +1,8 @@
+const path = require('path');
 const nodemailer = require('nodemailer');
 const { buildOrderConfirmationEmail } = require('../email/orderConfirmation');
+
+const LOGO_PATH = path.join(__dirname, '..', 'public', 'images', 'logo', 'dc_flat_logo.png');
 
 // Configure transporter
 // For production, use a real SMTP service (Gmail, SendGrid, etc.)
@@ -76,6 +79,13 @@ async function sendOrderConfirmation(orderData) {
         subject: email.subject,
         text: email.text,
         html: email.html,
+        attachments: [
+            {
+                filename: 'dc_flat_logo.png',
+                path: LOGO_PATH,
+                cid: 'dc_logo',
+            },
+        ],
     });
 
     const previewUrl = nodemailer.getTestMessageUrl(info);
