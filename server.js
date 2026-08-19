@@ -100,21 +100,6 @@ app.use(session({
 require('./config/passport')(pool);
 app.use(passport.initialize());
 app.use(passport.session());
-
-const fs = require('fs');
-
-const logoPath = path.join(
-    __dirname,
-    'public',
-    'images',
-    'logo',
-    'dc_flat_logo.png'
-);
-
-console.log('Public directory:', path.join(__dirname, 'public'));
-console.log('Logo path:', logoPath);
-console.log('Logo exists:', fs.existsSync(logoPath));
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Admin page protection ---
