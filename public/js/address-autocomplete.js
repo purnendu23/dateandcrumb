@@ -42,6 +42,12 @@
         return stateAbbrMap[lower] || state.toUpperCase();
     }
 
+    function normalizeZip(zip) {
+        const digits = String(zip || '').replace(/\D/g, '').slice(0, 9);
+        if (digits.length <= 5) return digits;
+        return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    }
+
     // ─── Try Google Places Autocomplete ──────────────────
     if (config.googleMapsApiKey && config.googleMapsApiKey !== 'your_google_maps_api_key_here') {
         try {
@@ -172,14 +178,14 @@
             if (stateSelect.querySelector(`option[value="${stateAbbr}"]`)) {
                 stateSelect.value = stateAbbr;
             }
-            document.getElementById('shipping_zip').value = zip;
+            document.getElementById('shipping_zip').value = normalizeZip(zip);
 
             window._addressAutoCompleted = {
                 source: 'google',
                 hasStreetNumber,
                 city,
                 state: stateAbbr,
-                zip,
+                zip: normalizeZip(zip),
             };
         });
     }
@@ -230,14 +236,14 @@
                 if (stateSelect.querySelector(`option[value="${stateAbbr}"]`)) {
                     stateSelect.value = stateAbbr;
                 }
-                document.getElementById('shipping_zip').value = ctx.postcode?.name || '';
+                document.getElementById('shipping_zip').value = normalizeZip(ctx.postcode?.name || '');
 
                 window._addressAutoCompleted = {
                     source: 'mapbox',
                     hasStreetNumber: /^\d/.test(addressInput.value),
                     city: ctx.place?.name || '',
                     state: stateAbbr,
-                    zip: ctx.postcode?.name || '',
+                    zip: normalizeZip(ctx.postcode?.name || ''),
                 };
             });
         } catch (e) {
@@ -302,14 +308,14 @@
                             if (stateSelect.querySelector(`option[value="${stateAbbr}"]`)) {
                                 stateSelect.value = stateAbbr;
                             }
-                            document.getElementById('shipping_zip').value = ctx.postcode?.name || '';
+                            document.getElementById('shipping_zip').value = normalizeZip(ctx.postcode?.name || '');
 
                             window._addressAutoCompleted = {
                                 source: 'mapbox',
                                 hasStreetNumber: /^\d/.test(street),
                                 city: ctx.place?.name || '',
                                 state: stateAbbr,
-                                zip: ctx.postcode?.name || '',
+                                zip: normalizeZip(ctx.postcode?.name || ''),
                             };
 
                             dd.style.display = 'none';

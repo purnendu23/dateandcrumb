@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { sendOrderConfirmation } = require('../config/mailer');
 
 // ========================================================
 // Stripe setup
@@ -144,6 +145,19 @@ function getStoredPaymentMethod(requestedMethod) {
     return allowed.has(requestedMethod) ? requestedMethod : 'stripe';
 }
 
+function formatCardBrand(brand) {
+    return String(brand || '')
+        .split('_')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+}
+
+function getPaymentDisplayName(method) {
+    if (method === 'apple_pay') return 'Apple Pay';
+    if (method === 'google_pay') return 'Google Pay';
+    return 'Credit / Debit Card';
+}
+
 // ========================================================
 // POST /api/orders
 // Creates the DB order only after independently verifying Stripe.
@@ -222,7 +236,9 @@ router.post('/', async (req, res) => {
 
         // Retrieve the payment from Stripe; never trust a payment status or
         // amount supplied by the browser.
-        const paymentIntent = await stripe.paymentIntents.retrieve(payment_id);
+        const paymentIntent = await stripe.paymentIntents.retrieve(payment_id, {
+            expand: ['latest_charge', 'payment_method'],
+        });
 
         if (paymentIntent.status !== 'succeeded') {
             return res.status(400).json({ error: 'Payment has not been completed.' });
@@ -321,6 +337,7 @@ router.post('/', async (req, res) => {
         const subtotal = subtotalInCents / 100;
         const salesTax = salesTaxInCents / 100;
         const total = totalInCents / 100;
+        const shippingCharge = 0;
         const requestedFullName = buildFullName(requestedFirstName, requestedLastName) || String(customer_name || '').trim();
         const paymentShippingName = String(paymentIntent.shipping?.name || '').trim();
         if (paymentShippingName && requestedFullName && normalizeText(paymentShippingName) !== normalizeText(requestedFullName)) {
@@ -406,6 +423,84 @@ router.post('/', async (req, res) => {
             }
 
             await conn.commit();
+
+            let paymentBrand = null;
+            let paymentLast4 = null;
+            let paymentType = getStoredPaymentMethod(payment_method);
+            const expandedPaymentMethod = paymentIntent.payment_method;
+            if (expandedPaymentMethod && typeof expandedPaymentMethod === 'object') {
+                paymentBrand = expandedPaymentMethod.card?.brand || null;
+                paymentLast4 = expandedPaymentMethod.card?.last4 || null;
+            } else if (typeof expandedPaymentMethod === 'string' && expandedPaymentMethod.startsWith('pm_')) {
+                try {
+                    const pm = await stripe.paymentMethods.retrieve(expandedPaymentMethod);
+                    paymentBrand = pm?.card?.brand || null;
+                    paymentLast4 = pm?.card?.last4 || null;
+                } catch (pmErr) {
+                    console.error('Unable to retrieve payment method details for email:', pmErr.message);
+                }
+            }
+
+            if (!paymentBrand || !paymentLast4) {
+                const chargeCard = paymentIntent.latest_charge?.payment_method_details?.card;
+                if (chargeCard) {
+                    paymentBrand = paymentBrand || chargeCard.brand || null;
+                    paymentLast4 = paymentLast4 || chargeCard.last4 || null;
+                }
+            }
+
+            const [emailItems] = await conn.execute(
+                `SELECT oi.quantity, oi.unit_price, p.name
+                 FROM order_items oi
+                 JOIN products p ON oi.product_id = p.id
+                 WHERE oi.order_id = ?
+                 ORDER BY oi.id ASC`,
+                [orderId]
+            );
+
+            const orderNumber = `#DC-${orderId}`;
+            const paymentDisplay = paymentLast4
+                ? `${formatCardBrand(paymentBrand) || 'Card'} •••• ${paymentLast4}`
+                : getPaymentDisplayName(paymentType);
+
+            try {
+                await sendOrderConfirmation({
+                    customerName: verifiedName,
+                    customerEmail: customer_email,
+                    orderNumber,
+                    orderDate: new Date(),
+                    items: emailItems.map((item) => {
+                        const quantity = Number(item.quantity || 0);
+                        const unitPrice = Number(item.unit_price || 0);
+                        return {
+                            name: item.name,
+                            quantity,
+                            unitPrice,
+                            lineTotal: quantity * unitPrice,
+                        };
+                    }),
+                    subtotal,
+                    shipping: shippingCharge,
+                    tax: salesTax,
+                    total,
+                    shippingAddress: {
+                        name: verifiedName,
+                        line1: verifiedAddress,
+                        line2: verifiedAddress2 || '',
+                        city: verifiedCity,
+                        state: verifiedState,
+                        zip: verifiedZip,
+                    },
+                    paymentMethod: {
+                        type: paymentType,
+                        brand: paymentBrand,
+                        last4: paymentLast4,
+                        display: paymentDisplay,
+                    },
+                });
+            } catch (emailErr) {
+                console.error('Failed to send order confirmation email:', emailErr.message);
+            }
 
             // Auto-save address to address book for logged-in users.
             // This runs after the order transaction; address-book failure must

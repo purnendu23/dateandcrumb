@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { buildOrderConfirmationEmail } = require('../email/orderConfirmation');
 
 // Configure transporter
 // For production, use a real SMTP service (Gmail, SendGrid, etc.)
@@ -65,4 +66,24 @@ async function sendVerificationEmail(toEmail, token, baseUrl) {
     return info;
 }
 
-module.exports = { sendVerificationEmail };
+async function sendOrderConfirmation(orderData) {
+    const transport = await getTransporter();
+    const email = buildOrderConfirmationEmail(orderData);
+
+    const info = await transport.sendMail({
+        from: process.env.SMTP_FROM || '"Date&Crumb" <noreply@dateandcrumb.com>',
+        to: orderData.customerEmail,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) {
+        console.log('Order confirmation preview URL:', previewUrl);
+    }
+
+    return info;
+}
+
+module.exports = { sendVerificationEmail, sendOrderConfirmation };

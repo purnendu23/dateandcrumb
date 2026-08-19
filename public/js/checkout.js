@@ -15,6 +15,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    const ZIP_REGEX = /^\d{5}(?:-\d{4})?$/;
+    function normalizeZip(value) {
+        const digits = String(value || '').replace(/\D/g, '').slice(0, 9);
+        if (digits.length <= 5) return digits;
+        return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    }
+    if (form.shipping_zip) {
+        form.shipping_zip.value = normalizeZip(form.shipping_zip.value);
+        form.shipping_zip.addEventListener('input', () => {
+            form.shipping_zip.value = normalizeZip(form.shipping_zip.value);
+        });
+        form.shipping_zip.addEventListener('blur', () => {
+            form.shipping_zip.value = normalizeZip(form.shipping_zip.value);
+        });
+    }
+
     if (items.length === 0) {
         formWrapper.innerHTML = `
             <div class="cart-empty">
@@ -66,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 line2: form.shipping_address2.value.trim(),
                 city: form.shipping_city.value.trim(),
                 state: form.shipping_state.value,
-                postal_code: form.shipping_zip.value.trim(),
+                postal_code: normalizeZip(form.shipping_zip.value.trim()),
                 country: 'US',
             },
         };
@@ -282,7 +298,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             form.shipping_address2.value = profileData.shipping_address2 || '';
             form.shipping_city.value = profileData.shipping_city || '';
             form.shipping_state.value = profileData.shipping_state || '';
-            form.shipping_zip.value = profileData.shipping_zip || '';
+            form.shipping_zip.value = normalizeZip(profileData.shipping_zip || '');
             invalidateTaxQuote();
         });
     }
@@ -332,7 +348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         form.shipping_address2.value = addr.address2 || '';
                         form.shipping_city.value = addr.city || '';
                         form.shipping_state.value = addr.state || '';
-                        form.shipping_zip.value = addr.zip || '';
+                        form.shipping_zip.value = normalizeZip(addr.zip || '');
 
                         if (profileData && !form.customer_email.value) {
                             form.customer_email.value = profileData.email || '';
@@ -390,6 +406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let stripeElements = null;
     let cardMounted = false;
     let cardElement = null;
+    let reviewedCardPaymentMethod = null;
 
     if (stripePublicKey && window.Stripe) {
         stripe = Stripe(stripePublicKey);
@@ -441,6 +458,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const errEl = document.getElementById('stripe-card-errors');
         cardElement.on('change', (event) => {
+            reviewedCardPaymentMethod = null;
             if (errEl) errEl.textContent = event.error ? event.error.message : '';
         });
 
@@ -634,11 +652,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const address = form.shipping_address.value.trim();
             const city = form.shipping_city.value.trim();
             const state = form.shipping_state.value;
-            const zip = form.shipping_zip.value.trim();
+            const zip = normalizeZip(form.shipping_zip.value.trim());
+            form.shipping_zip.value = zip;
 
             if (!firstName || !lastName || !email || !address || !city || !state || !zip) {
                 if (errEl) {
                     errEl.textContent = 'Please fill in all required fields.';
+                    errEl.style.display = 'block';
+                }
+                return;
+            }
+            if (!ZIP_REGEX.test(zip)) {
+                if (errEl) {
+                    errEl.textContent = 'Please enter ZIP Code as XXXXX or XXXXX-XXXX.';
                     errEl.style.display = 'block';
                 }
                 return;
@@ -648,7 +674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const autoCompleted = window._addressAutoCompleted;
             const isHighConfidence = autoCompleted &&
                 autoCompleted.hasStreetNumber &&
-                autoCompleted.zip === zip &&
+                normalizeZip(autoCompleted.zip) === zip &&
                 String(autoCompleted.city || '').toLowerCase() === city.toLowerCase() &&
                 autoCompleted.state === state;
 
@@ -700,7 +726,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 form.shipping_state.value = c.state;
                             }
 
-                            form.shipping_zip.value = c.zip;
+                            form.shipping_zip.value = normalizeZip(c.zip);
                             invalidateTaxQuote();
 
                             errEl.style.display = 'none';
@@ -815,6 +841,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnToReview.disabled = true;
                 btnToReview.textContent = 'Updating total…';
                 await ensureFreshTaxQuote();
+
+                if (selectedMethod === 'stripe') {
+                    if (!cardElement) {
+                        throw new Error('Stripe card payment is not available.');
+                    }
+
+                    btnToReview.textContent = 'Securing card…';
+                    const { error, paymentMethod } = await stripe.createPaymentMethod({
+                        type: 'card',
+                        card: cardElement,
+                        billing_details: {
+                            name: getCustomerName(),
+                            email: form.customer_email.value.trim(),
+                        },
+                    });
+
+                    if (error) {
+                        throw new Error(error.message || 'Unable to read card details.');
+                    }
+                    if (!paymentMethod?.card?.last4) {
+                        throw new Error('Unable to read card details.');
+                    }
+
+                    reviewedCardPaymentMethod = {
+                        id: paymentMethod.id,
+                        last4: paymentMethod.card.last4,
+                    };
+                } else {
+                    reviewedCardPaymentMethod = null;
+                }
             } catch (err) {
                 if (errEl) {
                     errEl.textContent = err.message || 'Unable to calculate sales tax.';
@@ -841,7 +897,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const paymentLabels = {
-                stripe: '<p>💳 Credit / Debit Card (Stripe)</p>',
+                stripe: reviewedCardPaymentMethod?.last4
+                    ? `<p>💳 Credit / Debit Card (Stripe) •••• ${escapeHTML(reviewedCardPaymentMethod.last4)}</p>`
+                    : '<p>💳 Credit / Debit Card (Stripe)</p>',
                 google_pay: '<p>🟢 Google Pay</p>',
                 apple_pay: '<p>🍎 Apple Pay</p>',
             };
@@ -917,11 +975,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const { error, paymentIntent } = await stripe.confirmCardPayment(
                 intentData.clientSecret,
-                {
-                    payment_method: {
-                        card: cardElement,
-                    },
-                }
+                reviewedCardPaymentMethod?.id
+                    ? { payment_method: reviewedCardPaymentMethod.id }
+                    : {
+                        payment_method: {
+                            card: cardElement,
+                        },
+                    }
             );
 
             if (error) {
@@ -967,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             shipping_address2: form.shipping_address2.value.trim(),
             shipping_city: form.shipping_city.value.trim(),
             shipping_state: form.shipping_state.value,
-            shipping_zip: form.shipping_zip.value.trim(),
+            shipping_zip: normalizeZip(form.shipping_zip.value.trim()),
             payment_method: method,
             payment_id: paymentId,
             items: getCartPayload(),
@@ -1042,7 +1102,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const shipping_address2 = form.shipping_address2.value.trim();
             const shipping_city = form.shipping_city.value.trim();
             const shipping_state = form.shipping_state.value;
-            const shipping_zip = form.shipping_zip.value.trim();
+            const shipping_zip = normalizeZip(form.shipping_zip.value.trim());
+            form.shipping_zip.value = shipping_zip;
 
             btnPostSignup.disabled = true;
             btnPostSignup.textContent = 'Creating…';

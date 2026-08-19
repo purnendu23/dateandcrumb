@@ -32,7 +32,6 @@
                     <h2 class="auth-title" style="text-align:center; margin-bottom: 2rem;">My Profile</h2>
 
                     <div id="profile-error" class="error-msg" style="display:none;"></div>
-                    <div id="profile-success" class="success-msg" style="display:none;"></div>
 
                     <form id="profile-form">
                         <div class="form-row">
@@ -131,8 +130,13 @@
                             </div>
                             <div class="form-group">
                                 <label for="shipping_zip">ZIP Code</label>
-                                <input type="text" id="shipping_zip" name="shipping_zip">
+                                <input type="text" id="shipping_zip" name="shipping_zip" inputmode="numeric" maxlength="10" autocomplete="postal-code">
                             </div>
+                        </div>
+
+                        <div id="profile-success" class="success-msg" style="display:none; opacity:0; transition: opacity 400ms ease; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1.5rem;">
+                            <img src="/images/logo/success-logo.png" alt="Success" style="height: 28px; width: auto;">
+                            <span>Profile updated successfully!</span>
                         </div>
 
                         <div style="margin-top: 1.5rem;">
@@ -159,6 +163,26 @@
             const form = document.getElementById('profile-form');
             const errorDiv = document.getElementById('profile-error');
             const successDiv = document.getElementById('profile-success');
+            const zipInput = document.getElementById('shipping_zip');
+            const ZIP_REGEX = /^\d{5}(?:-\d{4})?$/;
+            let successHideDelayTimeoutId;
+            let successFadeTimeoutId;
+
+            function normalizeZip(value) {
+                const digits = String(value || '').replace(/\D/g, '').slice(0, 9);
+                if (digits.length <= 5) return digits;
+                return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+            }
+
+            if (zipInput) {
+                zipInput.value = normalizeZip(zipInput.value);
+                zipInput.addEventListener('input', () => {
+                    zipInput.value = normalizeZip(zipInput.value);
+                });
+                zipInput.addEventListener('blur', () => {
+                    zipInput.value = normalizeZip(zipInput.value);
+                });
+            }
 
             try {
                 const res = await fetch('/api/auth/profile');
@@ -176,7 +200,7 @@
                 document.getElementById('shipping_address2').value = profile.shipping_address2 || '';
                 document.getElementById('shipping_city').value = profile.shipping_city || '';
                 document.getElementById('shipping_state').value = profile.shipping_state || '';
-                document.getElementById('shipping_zip').value = profile.shipping_zip || '';
+                document.getElementById('shipping_zip').value = normalizeZip(profile.shipping_zip || '');
             } catch (e) {
                 window.location.href = '/login.html';
                 return;
@@ -186,8 +210,25 @@
                 e.preventDefault();
                 errorDiv.style.display = 'none';
                 successDiv.style.display = 'none';
+                successDiv.style.opacity = '0';
+                if (successHideDelayTimeoutId) {
+                    clearTimeout(successHideDelayTimeoutId);
+                    successHideDelayTimeoutId = null;
+                }
+                if (successFadeTimeoutId) {
+                    clearTimeout(successFadeTimeoutId);
+                    successFadeTimeoutId = null;
+                }
 
                 try {
+                    const normalizedZip = normalizeZip(document.getElementById('shipping_zip').value.trim());
+                    document.getElementById('shipping_zip').value = normalizedZip;
+                    if (!ZIP_REGEX.test(normalizedZip)) {
+                        errorDiv.textContent = 'Please enter ZIP Code as XXXXX or XXXXX-XXXX.';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+
                     const res = await fetch('/api/auth/profile', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -199,7 +240,7 @@
                             shipping_address2: document.getElementById('shipping_address2').value.trim(),
                             shipping_city: document.getElementById('shipping_city').value.trim(),
                             shipping_state: document.getElementById('shipping_state').value,
-                            shipping_zip: document.getElementById('shipping_zip').value.trim(),
+                            shipping_zip: normalizedZip,
                         }),
                     });
                     const data = await res.json();
@@ -208,9 +249,30 @@
                         errorDiv.style.display = 'block';
                         return;
                     }
-                    successDiv.textContent = 'Profile updated successfully!';
-                    successDiv.style.display = 'block';
+                    successDiv.style.display = 'flex';
+                    successDiv.style.opacity = '1';
+                    successHideDelayTimeoutId = setTimeout(() => {
+                        successDiv.style.opacity = '0';
+                        successFadeTimeoutId = setTimeout(() => {
+                            successDiv.style.display = 'none';
+                            successFadeTimeoutId = null;
+                        }, 400);
+                        successHideDelayTimeoutId = null;
+                    }, 5000);
                 } catch (err) {
+                    if (successHideDelayTimeoutId) {
+                        clearTimeout(successHideDelayTimeoutId);
+                        successHideDelayTimeoutId = null;
+                    }
+                    if (successFadeTimeoutId) {
+                        clearTimeout(successFadeTimeoutId);
+                        successFadeTimeoutId = null;
+                    }
+                    successDiv.style.opacity = '0';
+                    successFadeTimeoutId = setTimeout(() => {
+                        successDiv.style.display = 'none';
+                        successFadeTimeoutId = null;
+                    }, 400);
                     errorDiv.textContent = 'Something went wrong. Please try again.';
                     errorDiv.style.display = 'block';
                 }

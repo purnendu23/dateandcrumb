@@ -132,7 +132,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="shipping_zip">ZIP Code *</label>
-                                <input type="text" id="shipping_zip" name="shipping_zip" required>
+                                <input type="text" id="shipping_zip" name="shipping_zip" required inputmode="numeric" maxlength="10" autocomplete="postal-code">
                             </div>
                         </div>
 
@@ -172,6 +172,24 @@
             const form = document.getElementById('profile-form');
             const errorDiv = document.getElementById('profile-error');
             const successDiv = document.getElementById('profile-success');
+            const zipInput = document.getElementById('shipping_zip');
+            const ZIP_REGEX = /^\d{5}(?:-\d{4})?$/;
+
+            function normalizeZip(value) {
+                const digits = String(value || '').replace(/\D/g, '').slice(0, 9);
+                if (digits.length <= 5) return digits;
+                return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+            }
+
+            if (zipInput) {
+                zipInput.value = normalizeZip(zipInput.value);
+                zipInput.addEventListener('input', () => {
+                    zipInput.value = normalizeZip(zipInput.value);
+                });
+                zipInput.addEventListener('blur', () => {
+                    zipInput.value = normalizeZip(zipInput.value);
+                });
+            }
 
             // Pre-fill shipping profile from account if available
             try {
@@ -186,7 +204,7 @@
                     if (profile.shipping_address2) document.getElementById('shipping_address2').value = profile.shipping_address2;
                     if (profile.shipping_city) document.getElementById('shipping_city').value = profile.shipping_city;
                     if (profile.shipping_state) document.getElementById('shipping_state').value = profile.shipping_state;
-                    if (profile.shipping_zip) document.getElementById('shipping_zip').value = profile.shipping_zip;
+                    if (profile.shipping_zip) document.getElementById('shipping_zip').value = normalizeZip(profile.shipping_zip);
                 } else {
                     // Not logged in — redirect to login
                     window.location.href = '/login.html';
@@ -205,10 +223,16 @@
                 const address = document.getElementById('shipping_address').value.trim();
                 const city = document.getElementById('shipping_city').value.trim();
                 const state = document.getElementById('shipping_state').value;
-                const zip = document.getElementById('shipping_zip').value.trim();
+                const zip = normalizeZip(document.getElementById('shipping_zip').value.trim());
+                document.getElementById('shipping_zip').value = zip;
 
                 if (!first_name || !last_name || !address || !city || !state || !zip) {
                     errorDiv.textContent = 'Please fill in all required fields.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                if (!ZIP_REGEX.test(zip)) {
+                    errorDiv.textContent = 'Please enter ZIP Code as XXXXX or XXXXX-XXXX.';
                     errorDiv.style.display = 'block';
                     return;
                 }
