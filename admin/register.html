@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Registration — Date &amp; Crumb</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); padding: 2rem; width: 100%; max-width: 420px; }
+        .card img { display: block; margin: 0 auto 1rem; height: 50px; }
+        .card h1 { text-align: center; font-size: 1.2rem; color: #8b4513; margin-bottom: 0.6rem; }
+        .subtitle { text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 1.2rem; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; color: #555; }
+        input { width: 100%; padding: 0.65rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; margin-bottom: 0.9rem; }
+        input:focus { outline: none; border-color: #8b4513; box-shadow: 0 0 0 2px rgba(139,69,19,0.15); }
+        button { width: 100%; padding: 0.75rem; background: #8b4513; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        button:hover { background: #6d350f; }
+        .error { color: #c0392b; font-size: 0.85rem; text-align: center; margin-bottom: 0.8rem; display: none; }
+        .ok { background: #e8f6ee; color: #1f7a3f; border: 1px solid #bfe6cf; border-radius: 8px; padding: 0.8rem; font-size: 0.9rem; margin-bottom: 1rem; display: none; }
+        .meta { margin-top: 1rem; text-align: center; font-size: 0.85rem; color: #666; }
+        .meta a { color: #8b4513; text-decoration: none; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img src="/images/logo/dc_flat_logo.svg" alt="Date &amp; Crumb">
+        <h1>Employee Registration</h1>
+        <p class="subtitle">Use your @dateandcrumb.com email.</p>
+        <div class="ok" id="ok"></div>
+        <div class="error" id="error"></div>
+        <form id="register-form">
+            <label for="first_name">First Name</label>
+            <input type="text" id="first_name" name="first_name" required>
+
+            <label for="last_name">Last Name</label>
+            <input type="text" id="last_name" name="last_name" required>
+
+            <label for="email">Work Email</label>
+            <input type="email" id="email" name="email" required placeholder="you@dateandcrumb.com">
+
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required placeholder="your.username">
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required minlength="8">
+
+            <button type="submit">Register</button>
+        </form>
+        <p class="meta"><a href="/admin/login.html">Back to login</a></p>
+    </div>
+    <script>
+        const errorEl = document.getElementById('error');
+        const okEl = document.getElementById('ok');
+        const form = document.getElementById('register-form');
+
+        function showError(msg) {
+            okEl.style.display = 'none';
+            errorEl.textContent = msg;
+            errorEl.style.display = 'block';
+        }
+        function showOk(msg) {
+            errorEl.style.display = 'none';
+            okEl.textContent = msg;
+            okEl.style.display = 'block';
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const status = params.get('status');
+        if (status === 'awaiting_admin') {
+            showOk('Email verified. Your request is waiting for admin approval.');
+        } else if (status === 'approved') {
+            showOk('Your account is approved. You can now log in.');
+        } else if (status === 'error') {
+            showError(params.get('message') || 'Verification link is invalid or expired.');
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorEl.style.display = 'none';
+            okEl.style.display = 'none';
+
+            const payload = {
+                first_name: document.getElementById('first_name').value,
+                last_name: document.getElementById('last_name').value,
+                email: document.getElementById('email').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+            };
+
+            const res = await fetch('/api/admin/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                showError(data.error || 'Registration failed.');
+                return;
+            }
+            showOk('Registration received. Verify your email, then wait for admin approval.');
+            form.reset();
+        });
+    </script>
+</body>
+</html>

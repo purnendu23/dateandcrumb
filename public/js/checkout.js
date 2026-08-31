@@ -51,12 +51,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span>$${(item.price * item.quantity).toFixed(2)}</span>
         </div>
     `).join('') + `
+        <div class="checkout-item" id="checkout-shipping-row" style="display:none;">
+            <span>Shipping</span>
+            <span id="checkout-shipping-amount">$0.00</span>
+        </div>
         <div class="checkout-item" id="checkout-tax-row" style="display:none;">
             <span>Sales tax</span>
             <span id="checkout-tax-amount">$0.00</span>
         </div>
     `;
 
+    const checkoutShippingRow = document.getElementById('checkout-shipping-row');
+    const checkoutShippingAmount = document.getElementById('checkout-shipping-amount');
     const checkoutTaxRow = document.getElementById('checkout-tax-row');
     const checkoutTaxAmount = document.getElementById('checkout-tax-amount');
 
@@ -102,11 +108,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderTaxSummary() {
         if (!taxQuote) {
+            if (checkoutShippingRow) checkoutShippingRow.style.display = 'none';
             if (checkoutTaxRow) checkoutTaxRow.style.display = 'none';
             checkoutTotal.textContent = Cart.getTotal().toFixed(2);
             return;
         }
 
+        if (checkoutShippingRow) checkoutShippingRow.style.display = '';
+        if (checkoutShippingAmount) {
+            checkoutShippingAmount.textContent = `$${(taxQuote.shipping / 100).toFixed(2)}`;
+        }
         if (checkoutTaxRow) checkoutTaxRow.style.display = '';
         if (checkoutTaxAmount) {
             checkoutTaxAmount.textContent = `$${(taxQuote.tax / 100).toFixed(2)}`;
@@ -154,6 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         taxQuote = {
             id: data.taxCalculationId,
             subtotal: Number(data.subtotal),
+            shipping: Number(data.shipping || 0),
             tax: Number(data.tax),
             total: Number(data.total),
             expiresAt: data.expiresAt,
@@ -224,6 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ...taxQuote,
             id: data.taxCalculationId,
             subtotal: Number(data.subtotal),
+            shipping: Number(data.shipping || 0),
             tax: Number(data.tax),
             total: Number(data.total),
             shippingFingerprint: shippingFingerprint(),
@@ -994,6 +1007,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (paymentIntent.status === 'succeeded') {
+                if (placeBtn) placeBtn.textContent = 'Finalizing order…';
                 await placeOrder('stripe', paymentIntent.id);
             } else {
                 showCheckoutError('Payment was not completed. Please try again.');
@@ -1017,6 +1031,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================================
 
     async function placeOrder(method, paymentId) {
+        showCheckoutStatus('Payment received, finalizing your order…');
+
         const data = {
             customer_name: getCustomerName(),
             customer_first_name: form.customer_first_name.value.trim(),
@@ -1039,13 +1055,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             body: JSON.stringify(data),
         });
 
-        const result = await res.json();
-
-        if (!res.ok) {
-            showCheckoutError(result.error || 'Failed to place order.');
-            return;
+        let result = {};
+        try {
+            result = await res.json();
+        } catch (_) {
+            // Keep explicit fallback behavior for non-JSON error responses.
         }
 
+        if (!res.ok) {
+            throw new Error(result.error || 'Failed to place order.');
+        }
+
+        hideCheckoutError();
         Cart.clear();
         formWrapper.style.display = 'none';
 
@@ -1059,7 +1080,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!isLoggedIn) {
             const signup = document.getElementById('post-purchase-signup');
-            if (signup) signup.style.display = '';
+            if (signup) {
+                const email = form.customer_email.value.trim();
+                try {
+                    const chk = await fetch(`/api/auth/account-exists?email=${encodeURIComponent(email)}`);
+                    const chkData = await chk.json();
+                    if (chkData.exists) {
+                        document.getElementById('post-signup-existing-email').textContent = email;
+                        document.getElementById('post-signup-existing').style.display = '';
+                        document.getElementById('post-signup-form-wrapper').style.display = 'none';
+                    }
+                } catch (_) { /* show form as normal on error */ }
+                signup.style.display = '';
+            }
         }
     }
 
@@ -1167,13 +1200,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showCheckoutError(msg) {
         const el = document.getElementById('checkout-error');
         if (!el) return;
+        el.classList.remove('info-msg');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    function showCheckoutStatus(msg) {
+        const el = document.getElementById('checkout-error');
+        if (!el) return;
+        el.classList.add('info-msg');
         el.textContent = msg;
         el.style.display = 'block';
     }
 
     function hideCheckoutError() {
         const el = document.getElementById('checkout-error');
-        if (el) el.style.display = 'none';
+        if (!el) return;
+        el.classList.remove('info-msg');
+        el.style.display = 'none';
     }
 });
 

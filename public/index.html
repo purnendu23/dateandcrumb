@@ -113,6 +113,9 @@
     <footer>
         <div class="container">
             <p>&copy; 2026 Date&amp;Crumb. All rights reserved.</p>
+            <p style="margin-top:0.75rem;">
+                <a href="/admin/login.html" class="btn btn-outline" style="padding:0.4rem 0.9rem; font-size:0.85rem;">Admin</a>
+            </p>
         </div>
     </footer>
 
@@ -125,7 +128,10 @@
             try {
                 const res = await fetch('/api/products');
                 const products = await res.json();
-                grid.innerHTML = products.map(p => {
+                const heroProducts = (products || []).filter(
+                    p => String(p.name || '').trim().toLowerCase() !== 'variety pack'
+                );
+                grid.innerHTML = heroProducts.map(p => {
                     const images = JSON.parse(p.image_url || '[]');
                     const frontImg = images[0] || '';
                     const flavorParam = encodeURIComponent(p.name);

@@ -67,10 +67,44 @@ bakehouse/
 | POST   | /api/orders           | Place a new order                  |
 | GET    | /api/orders/:id       | Get order details                  |
 
+### Admin shipping labels (EasyPost)
+
+Admin users can create shipping labels on demand from the Admin → Orders UI.
+
+- `POST /api/admin/orders/:id/shipping-label` — creates/buys a label via EasyPost and stores a local PDF copy.
+- `GET /api/admin/orders/:id/shipping-label` — streams the stored PDF for view/print.
+
+Required environment variables:
+
+- `EASYPOST_API_KEY`
+- `EASYPOST_FROM_NAME`
+- `EASYPOST_FROM_ADDRESS1`
+- `EASYPOST_FROM_CITY`
+- `EASYPOST_FROM_STATE`
+- `EASYPOST_FROM_ZIP`
+
+Optional:
+
+- `EASYPOST_FROM_COMPANY`, `EASYPOST_FROM_PHONE`, `EASYPOST_FROM_ADDRESS2`, `EASYPOST_FROM_COUNTRY`
+- `EASYPOST_PARCEL_WEIGHT_OZ`, `EASYPOST_PARCEL_LENGTH_IN`, `EASYPOST_PARCEL_WIDTH_IN`, `EASYPOST_PARCEL_HEIGHT_IN`
+
 ## Database
 
-SQLite database with four tables:
+Database tables include:
 - **categories** — product categories
 - **products** — product catalog with stock tracking
-- **orders** — customer orders with shipping info
+- **users** — enterprise/employee identities (admin access)
+- **customers** — website customer accounts and buyer profiles
+- **orders** — customer orders with shipping info (linked to `customers`)
 - **order_items** — line items for each order
+
+Auth flows are intentionally separated:
+- Customer website auth: `/api/auth/*` (backs onto `customers`)
+- Enterprise auth: `/api/admin/auth/*` (backs onto `users`, with login lockout/rate limiting)
+
+Enterprise user rules:
+- Only `@dateandcrumb.com` (or `ENTERPRISE_EMAIL_DOMAIN`) emails can register/login through enterprise auth.
+- Enterprise login accepts **email or username**.
+- Exactly one `users.is_admin = 1` account is allowed (first admin must be created directly in DB).
+- Non-admin enterprise users register at `/admin/register.html`, verify email, then wait for admin approval.
+- Admin approvals are handled in Admin → Users (pending approval list).

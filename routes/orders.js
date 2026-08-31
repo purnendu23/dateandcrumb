@@ -13,6 +13,9 @@ if (process.env.STRIPE_SECRET_KEY) {
     console.log('Stripe not configured — set STRIPE_SECRET_KEY env var.');
 }
 
+const SHIPPING_FLAT_RATE = 4.99;
+const FREE_SHIPPING_THRESHOLD = 50;
+
 // ========================================================
 // Helpers
 // ========================================================
@@ -31,6 +34,11 @@ function normalizeState(value) {
 function normalizePostalCode(value) {
     return String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
 }
+
+function normalizeEmail(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
 function buildFullName(firstName, lastName) {
     const full = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
     return full;
@@ -158,6 +166,243 @@ function getPaymentDisplayName(method) {
     return 'Credit / Debit Card';
 }
 
+function getShippingChargeInCents(subtotalInCents) {
+    return subtotalInCents <= Math.round(FREE_SHIPPING_THRESHOLD * 100)
+        ? Math.round(SHIPPING_FLAT_RATE * 100)
+        : 0;
+}
+
+async function upsertCustomerInTransaction(conn, {
+    email,
+    firstName,
+    lastName,
+    fullName,
+    phone,
+    shippingAddress,
+    shippingAddress2,
+    shippingCity,
+    shippingState,
+    shippingZip,
+}) {
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedFirstName = String(firstName || '').trim() || null;
+    const normalizedLastName = String(lastName || '').trim() || null;
+    const normalizedFullName = String(fullName || '').trim() || null;
+    const normalizedPhone = String(phone || '').trim() || null;
+    const normalizedAddress = String(shippingAddress || '').trim() || null;
+    const normalizedAddress2 = String(shippingAddress2 || '').trim() || null;
+    const normalizedCity = String(shippingCity || '').trim() || null;
+    const normalizedState = normalizeState(shippingState) || null;
+    const normalizedZip = normalizePostalCode(shippingZip) || null;
+
+    const [rows] = await conn.execute(
+        'SELECT id FROM customers WHERE email = ? LIMIT 1 FOR UPDATE',
+        [normalizedEmail]
+    );
+
+    if (rows.length > 0) {
+        const existing = rows[0];
+        await conn.execute(
+            `UPDATE customers
+             SET first_name = ?,
+                 last_name = ?,
+                 full_name = ?,
+                 phone = ?,
+                 shipping_address = ?,
+                 shipping_address2 = ?,
+                 shipping_city = ?,
+                 shipping_state = ?,
+                 shipping_zip = ?,
+                 last_order_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [
+                normalizedFirstName,
+                normalizedLastName,
+                normalizedFullName,
+                normalizedPhone,
+                normalizedAddress,
+                normalizedAddress2,
+                normalizedCity,
+                normalizedState,
+                normalizedZip,
+                existing.id,
+            ]
+        );
+        return existing.id;
+    }
+
+    const [insertResult] = await conn.execute(
+        `INSERT INTO customers (
+            email,
+            verified,
+            first_name,
+            last_name,
+            full_name,
+            phone,
+            shipping_address,
+            shipping_address2,
+            shipping_city,
+            shipping_state,
+            shipping_zip,
+            last_order_at
+         ) VALUES (?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [
+            normalizedEmail,
+            normalizedFirstName,
+            normalizedLastName,
+            normalizedFullName,
+            normalizedPhone,
+            normalizedAddress,
+            normalizedAddress2,
+            normalizedCity,
+            normalizedState,
+            normalizedZip,
+        ]
+    );
+    return insertResult.insertId;
+}
+
+function queuePostOrderTasks({
+    db,
+    orderId,
+    addressBookCustomerId,
+    customerEmail,
+    verifiedName,
+    verifiedPhone,
+    verifiedAddress,
+    verifiedAddress2,
+    verifiedCity,
+    verifiedState,
+    verifiedZip,
+    requestedFirstName,
+    requestedLastName,
+    subtotal,
+    salesTax,
+    total,
+    paymentType,
+    paymentIntent,
+}) {
+    setImmediate(async () => {
+        const shippingCharge = 0;
+        let paymentBrand = null;
+        let paymentLast4 = null;
+        const expandedPaymentMethod = paymentIntent.payment_method;
+
+        if (expandedPaymentMethod && typeof expandedPaymentMethod === 'object') {
+            paymentBrand = expandedPaymentMethod.card?.brand || null;
+            paymentLast4 = expandedPaymentMethod.card?.last4 || null;
+        } else if (typeof expandedPaymentMethod === 'string' && expandedPaymentMethod.startsWith('pm_')) {
+            try {
+                const pm = await stripe.paymentMethods.retrieve(expandedPaymentMethod);
+                paymentBrand = pm?.card?.brand || null;
+                paymentLast4 = pm?.card?.last4 || null;
+            } catch (pmErr) {
+                console.error('Unable to retrieve payment method details for email:', pmErr.message);
+            }
+        }
+
+        if (!paymentBrand || !paymentLast4) {
+            const chargeCard = paymentIntent.latest_charge?.payment_method_details?.card;
+            if (chargeCard) {
+                paymentBrand = paymentBrand || chargeCard.brand || null;
+                paymentLast4 = paymentLast4 || chargeCard.last4 || null;
+            }
+        }
+
+        const orderNumber = `#DC-${orderId}`;
+        const paymentDisplay = paymentLast4
+            ? `${formatCardBrand(paymentBrand) || 'Card'} •••• ${paymentLast4}`
+            : getPaymentDisplayName(paymentType);
+
+        try {
+            const [emailItems] = await db.execute(
+                `SELECT oi.quantity, oi.unit_price, p.name
+                 FROM order_items oi
+                 JOIN products p ON oi.product_id = p.id
+                 WHERE oi.order_id = ?
+                 ORDER BY oi.id ASC`,
+                [orderId]
+            );
+
+            await sendOrderConfirmation({
+                customerName: verifiedName,
+                customerEmail,
+                orderNumber,
+                orderDate: new Date(),
+                items: emailItems.map((item) => {
+                    const quantity = Number(item.quantity || 0);
+                    const unitPrice = Number(item.unit_price || 0);
+                    return {
+                        name: item.name,
+                        quantity,
+                        unitPrice,
+                        lineTotal: quantity * unitPrice,
+                    };
+                }),
+                subtotal,
+                shipping: shippingCharge,
+                tax: salesTax,
+                total,
+                shippingAddress: {
+                    name: verifiedName,
+                    line1: verifiedAddress,
+                    line2: verifiedAddress2 || '',
+                    city: verifiedCity,
+                    state: verifiedState,
+                    zip: verifiedZip,
+                },
+                paymentMethod: {
+                    type: paymentType,
+                    brand: paymentBrand,
+                    last4: paymentLast4,
+                    display: paymentDisplay,
+                },
+            });
+        } catch (emailErr) {
+            console.error('Failed to send order confirmation email:', emailErr.message);
+        }
+
+        if (addressBookCustomerId) {
+            try {
+                const [existing] = await db.execute(
+                    `SELECT id
+                     FROM address_book
+                     WHERE customer_id = ?
+                       AND address = ?
+                       AND city = ?
+                       AND state = ?
+                       AND zip = ?`,
+                    [addressBookCustomerId, verifiedAddress, verifiedCity, verifiedState, verifiedZip]
+                );
+
+                if (existing.length === 0) {
+                    await db.execute(
+                        `INSERT INTO address_book (
+                           customer_id, label, first_name, last_name, name, phone,
+                            address, address2, city, state, zip
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                           addressBookCustomerId,
+                           null,
+                           requestedFirstName || null,
+                           requestedLastName || null,
+                           verifiedName,
+                            verifiedPhone,
+                            verifiedAddress,
+                            verifiedAddress2,
+                            verifiedCity,
+                            verifiedState,
+                            verifiedZip,
+                        ]
+                    );
+                }
+            } catch (addrErr) {
+                console.error('Failed to save address to address book:', addrErr.message);
+            }
+        }
+    });
+}
+
 // ========================================================
 // POST /api/orders
 // Creates the DB order only after independently verifying Stripe.
@@ -182,6 +427,7 @@ router.post('/', async (req, res) => {
     } = req.body;
     const requestedFirstName = String(customer_first_name || '').trim();
     const requestedLastName = String(customer_last_name || '').trim();
+    const normalizedCustomerEmail = normalizeEmail(customer_email);
 
     if (
         !requestedFirstName ||
@@ -219,7 +465,7 @@ router.post('/', async (req, res) => {
         // Idempotency at the application level: if the browser retries after
         // success, return the already-created order instead of duplicating it.
         const [existingOrders] = await db.execute(
-            'SELECT id, subtotal, sales_tax, total FROM orders WHERE payment_id = ? LIMIT 1',
+            'SELECT id, subtotal, shipping_cost, sales_tax, total FROM orders WHERE payment_id = ? LIMIT 1',
             [payment_id]
         );
 
@@ -229,6 +475,7 @@ router.post('/', async (req, res) => {
                 message: 'Order already placed',
                 order_id: existing.id,
                 subtotal: Number(existing.subtotal).toFixed(2),
+                shipping_cost: Number(existing.shipping_cost || 0).toFixed(2),
                 sales_tax: Number(existing.sales_tax).toFixed(2),
                 total: Number(existing.total).toFixed(2),
             });
@@ -250,7 +497,7 @@ router.post('/', async (req, res) => {
 
         if (
             paymentIntent.receipt_email &&
-            normalizeText(paymentIntent.receipt_email) !== normalizeText(customer_email)
+            normalizeText(paymentIntent.receipt_email) !== normalizeText(normalizedCustomerEmail)
         ) {
             return res.status(400).json({
                 error: 'The order email does not match the completed payment.',
@@ -275,9 +522,16 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Invalid tax calculation currency.' });
         }
 
-        if (Number(taxCalculation.amount_total) !== Number(paymentIntent.amount_received)) {
+        const { paidItems, subtotalInCents } =
+            await getPaidItemsFromTaxCalculation(taxCalculationId);
+        const salesTaxInCents = Number(taxCalculation.tax_amount_exclusive || 0);
+        const shippingInCents = getShippingChargeInCents(subtotalInCents);
+        const expectedAmountInCents = Number(taxCalculation.amount_total) + shippingInCents;
+
+        if (expectedAmountInCents !== Number(paymentIntent.amount_received)) {
             console.error('Stripe amount mismatch:', {
                 taxTotal: taxCalculation.amount_total,
+                shipping: shippingInCents,
                 amountReceived: paymentIntent.amount_received,
             });
 
@@ -316,28 +570,23 @@ router.post('/', async (req, res) => {
             });
         }
 
-        const { paidItems, subtotalInCents } =
-            await getPaidItemsFromTaxCalculation(taxCalculationId);
-
         if (!cartsMatch(items, paidItems)) {
             return res.status(400).json({
                 error: 'Order items do not match the completed payment.',
             });
         }
-
-        const salesTaxInCents = Number(taxCalculation.tax_amount_exclusive || 0);
         const totalInCents = Number(paymentIntent.amount_received);
 
-        if (subtotalInCents + salesTaxInCents !== totalInCents) {
+        if (subtotalInCents + salesTaxInCents + shippingInCents !== totalInCents) {
             return res.status(400).json({
-                error: 'Order subtotal and tax do not match the completed payment.',
+                error: 'Order subtotal, shipping, and tax do not match the completed payment.',
             });
         }
 
         const subtotal = subtotalInCents / 100;
+        const shippingCost = shippingInCents / 100;
         const salesTax = salesTaxInCents / 100;
         const total = totalInCents / 100;
-        const shippingCharge = 0;
         const requestedFullName = buildFullName(requestedFirstName, requestedLastName) || String(customer_name || '').trim();
         const paymentShippingName = String(paymentIntent.shipping?.name || '').trim();
         if (paymentShippingName && requestedFullName && normalizeText(paymentShippingName) !== normalizeText(requestedFullName)) {
@@ -374,8 +623,22 @@ router.post('/', async (req, res) => {
                 }
             }
 
+            const customerId = await upsertCustomerInTransaction(conn, {
+                email: normalizedCustomerEmail,
+                firstName: requestedFirstName,
+                lastName: requestedLastName,
+                fullName: verifiedName,
+                phone: verifiedPhone,
+                shippingAddress: verifiedAddress,
+                shippingAddress2: verifiedAddress2,
+                shippingCity: verifiedCity,
+                shippingState: verifiedState,
+                shippingZip: verifiedZip,
+            });
+
             const [orderResult] = await conn.execute(
                 `INSERT INTO orders (
+                    customer_id,
                     customer_name,
                     customer_first_name,
                     customer_last_name,
@@ -387,24 +650,27 @@ router.post('/', async (req, res) => {
                     shipping_state,
                     shipping_zip,
                     subtotal,
+                    shipping_cost,
                     sales_tax,
                     total,
                     payment_method,
                     payment_id,
                     tax_calculation_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                   [
+                    customerId,
                     verifiedName,
-                   requestedFirstName || null,
-                   requestedLastName || null,
-                   customer_email,
-                   verifiedPhone,
+                    requestedFirstName || null,
+                    requestedLastName || null,
+                    normalizedCustomerEmail,
+                    verifiedPhone,
                     verifiedAddress,
                     verifiedAddress2,
                     verifiedCity,
                     verifiedState,
                     verifiedZip,
                     subtotal,
+                    shippingCost,
                     salesTax,
                     total,
                     getStoredPaymentMethod(payment_method),
@@ -424,139 +690,46 @@ router.post('/', async (req, res) => {
 
             await conn.commit();
 
-            let paymentBrand = null;
-            let paymentLast4 = null;
-            let paymentType = getStoredPaymentMethod(payment_method);
-            const expandedPaymentMethod = paymentIntent.payment_method;
-            if (expandedPaymentMethod && typeof expandedPaymentMethod === 'object') {
-                paymentBrand = expandedPaymentMethod.card?.brand || null;
-                paymentLast4 = expandedPaymentMethod.card?.last4 || null;
-            } else if (typeof expandedPaymentMethod === 'string' && expandedPaymentMethod.startsWith('pm_')) {
-                try {
-                    const pm = await stripe.paymentMethods.retrieve(expandedPaymentMethod);
-                    paymentBrand = pm?.card?.brand || null;
-                    paymentLast4 = pm?.card?.last4 || null;
-                } catch (pmErr) {
-                    console.error('Unable to retrieve payment method details for email:', pmErr.message);
-                }
-            }
-
-            if (!paymentBrand || !paymentLast4) {
-                const chargeCard = paymentIntent.latest_charge?.payment_method_details?.card;
-                if (chargeCard) {
-                    paymentBrand = paymentBrand || chargeCard.brand || null;
-                    paymentLast4 = paymentLast4 || chargeCard.last4 || null;
-                }
-            }
-
-            const [emailItems] = await conn.execute(
-                `SELECT oi.quantity, oi.unit_price, p.name
-                 FROM order_items oi
-                 JOIN products p ON oi.product_id = p.id
-                 WHERE oi.order_id = ?
-                 ORDER BY oi.id ASC`,
-                [orderId]
-            );
-
-            const orderNumber = `#DC-${orderId}`;
-            const paymentDisplay = paymentLast4
-                ? `${formatCardBrand(paymentBrand) || 'Card'} •••• ${paymentLast4}`
-                : getPaymentDisplayName(paymentType);
-
-            try {
-                await sendOrderConfirmation({
-                    customerName: verifiedName,
-                    customerEmail: customer_email,
-                    orderNumber,
-                    orderDate: new Date(),
-                    items: emailItems.map((item) => {
-                        const quantity = Number(item.quantity || 0);
-                        const unitPrice = Number(item.unit_price || 0);
-                        return {
-                            name: item.name,
-                            quantity,
-                            unitPrice,
-                            lineTotal: quantity * unitPrice,
-                        };
-                    }),
-                    subtotal,
-                    shipping: shippingCharge,
-                    tax: salesTax,
-                    total,
-                    shippingAddress: {
-                        name: verifiedName,
-                        line1: verifiedAddress,
-                        line2: verifiedAddress2 || '',
-                        city: verifiedCity,
-                        state: verifiedState,
-                        zip: verifiedZip,
-                    },
-                    paymentMethod: {
-                        type: paymentType,
-                        brand: paymentBrand,
-                        last4: paymentLast4,
-                        display: paymentDisplay,
-                    },
-                });
-            } catch (emailErr) {
-                console.error('Failed to send order confirmation email:', emailErr.message);
-            }
-
-            // Auto-save address to address book for logged-in users.
-            // This runs after the order transaction; address-book failure must
-            // never undo a successfully paid order.
-            if (req.isAuthenticated && req.isAuthenticated()) {
-                try {
-                    const [existing] = await db.execute(
-                        `SELECT id
-                         FROM address_book
-                         WHERE user_id = ?
-                           AND address = ?
-                           AND city = ?
-                           AND state = ?
-                           AND zip = ?`,
-                        [
-                            req.user.id,
-                            verifiedAddress,
-                            verifiedCity,
-                            verifiedState,
-                            verifiedZip,
-                        ]
-                    );
-
-                    if (existing.length === 0) {
-                        await db.execute(
-                            `INSERT INTO address_book (
-                                user_id, label, first_name, last_name, name, phone,
-                                address, address2, city, state, zip
-                             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                            [
-                                req.user.id,
-                                null,
-                                requestedFirstName || null,
-                                requestedLastName || null,
-                                verifiedName,
-                                verifiedPhone,
-                                verifiedAddress,
-                                verifiedAddress2,
-                                verifiedCity,
-                                verifiedState,
-                                verifiedZip,
-                            ]
-                        );
-                    }
-                } catch (addrErr) {
-                    console.error('Failed to save address to address book:', addrErr.message);
-                }
-            }
-
-            return res.status(201).json({
+            const paymentType = getStoredPaymentMethod(payment_method);
+            const addressBookCustomerId =
+                req.isAuthenticated &&
+                req.isAuthenticated() &&
+                req.user?.principal_type === 'customer'
+                    ? req.user.id
+                    : null;
+            const responsePayload = {
                 message: 'Order placed successfully',
                 order_id: orderId,
                 subtotal: subtotal.toFixed(2),
+                shipping_cost: shippingCost.toFixed(2),
                 sales_tax: salesTax.toFixed(2),
                 total: total.toFixed(2),
+            };
+
+            // Keep charge + DB commit synchronous, but move non-critical work
+            // off the request path so the customer sees confirmation sooner.
+            queuePostOrderTasks({
+                db,
+                orderId,
+                customerEmail: normalizedCustomerEmail,
+                verifiedName,
+                verifiedPhone,
+                verifiedAddress,
+                verifiedAddress2,
+                verifiedCity,
+                verifiedState,
+                verifiedZip,
+                requestedFirstName,
+                requestedLastName,
+                subtotal,
+                salesTax,
+                total,
+                paymentType,
+                paymentIntent,
+                addressBookCustomerId,
             });
+
+            return res.status(201).json(responsePayload);
         } catch (err) {
             await conn.rollback();
 
@@ -573,6 +746,7 @@ router.post('/', async (req, res) => {
                         message: 'Order already placed',
                         order_id: existing[0].id,
                         subtotal: Number(existing[0].subtotal).toFixed(2),
+                        shipping_cost: Number(existing[0].shipping_cost || 0).toFixed(2),
                         sales_tax: Number(existing[0].sales_tax).toFixed(2),
                         total: Number(existing[0].total).toFixed(2),
                     });
@@ -598,6 +772,9 @@ router.post('/', async (req, res) => {
 router.get('/my', async (req, res) => {
     if (!req.isAuthenticated || !req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not logged in.' });
+    }
+    if (req.user?.principal_type !== 'customer') {
+        return res.status(403).json({ error: 'Customer session required.' });
     }
 
     const db = req.app.locals.db;

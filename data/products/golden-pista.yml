@@ -2,9 +2,10 @@ name: Golden Pista
 description: >
   A rich, aromatic snack with golden saffron, warm cardamom, and a delicate nutty finish,
   perfect alongside evening tea or coffee.
-price: 4.50
+price: 44.89
 category: Healthy Bars
 featured: true
+out_of_stock: false
 
 images:
   - /images/golden-pista/front_picture.png

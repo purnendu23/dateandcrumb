@@ -32,6 +32,9 @@
         .stat-card { flex: 1; min-width: 0; background: var(--admin-card); border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
         .stat-card .label { font-size: 0.8rem; color: var(--admin-text-light); text-transform: uppercase; letter-spacing: 0.05em; }
         .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--admin-primary); margin-top: 0.25rem; }
+        .production-list { margin-top: 0.45rem; display: flex; flex-direction: column; gap: 0.22rem; }
+        .production-line { font-size: 0.82rem; color: var(--admin-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .production-empty { margin-top: 0.45rem; font-size: 0.82rem; color: var(--admin-text-light); }
 
         /* Tabs */
         .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 2px solid var(--admin-border); }
@@ -46,6 +49,54 @@
         th { background: var(--admin-bg); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--admin-text-light); text-align: left; padding: 0.75rem 1rem; }
         td { padding: 0.75rem 1rem; border-top: 1px solid var(--admin-border); font-size: 0.9rem; }
         tr:hover td { background: #fafafa; }
+        .orders-table th, .orders-table td { vertical-align: top; }
+        .orders-table .order-col { min-width: 120px; }
+        .orders-table .customer-col { min-width: 180px; }
+        .orders-table .items-col { min-width: 220px; }
+        .orders-table .total-col { width: 90px; }
+        .orders-table .status-col { width: 110px; }
+        .orders-table .shipping-col { min-width: 170px; }
+        .orders-table .actions-col { width: 56px; text-align: right; }
+        .muted-meta { color: var(--admin-text-light); font-size: 0.78rem; margin-top: 0.15rem; }
+        .order-link { color: var(--admin-primary); font-weight: 700; text-decoration: none; }
+        .order-link:hover { text-decoration: underline; }
+        .text-link { display: inline-block; margin-top: 0.35rem; color: var(--admin-primary); text-decoration: none; font-size: 0.8rem; }
+        .text-link:hover { text-decoration: underline; }
+        .item-summary-link { color: var(--admin-text); text-decoration: none; font-size: 0.86rem; line-height: 1.35; }
+        .item-summary-link:hover { color: var(--admin-primary); text-decoration: underline; }
+        .total-amount { font-size: 1rem; font-weight: 700; }
+        .ship-main { font-size: 0.85rem; color: var(--admin-text); }
+        .ship-sub { font-size: 0.78rem; color: var(--admin-text-light); margin-top: 0.2rem; }
+        .ship-stack { display: flex; flex-direction: column; gap: 0.35rem; }
+        .create-label-btn { white-space: nowrap; }
+        .ship-action-row { display: flex; gap: 0.35rem; align-items: center; }
+        .ship-action-select { flex: 1; min-width: 0; padding: 0.3rem 0.45rem; border: 1px solid var(--admin-border); border-radius: 4px; font-size: 0.75rem; background: #fff; color: var(--admin-text); }
+        .ship-action-btn { padding: 0.3rem 0.6rem; font-size: 0.72rem; white-space: nowrap; }
+        .row-menu { position: relative; display: inline-block; }
+        .row-menu summary { list-style: none; cursor: pointer; color: var(--admin-text-light); font-weight: 700; padding: 0.2rem 0.4rem; border-radius: 4px; user-select: none; }
+        .row-menu summary::-webkit-details-marker { display: none; }
+        .row-menu summary:hover { background: #f3eee9; color: var(--admin-primary); }
+        .row-menu[open] summary { background: #f3eee9; color: var(--admin-primary); }
+        .row-menu-list { position: absolute; right: 0; top: 1.8rem; z-index: 20; background: #fff; border: 1px solid var(--admin-border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); min-width: 150px; overflow: hidden; }
+        .row-menu-list button { width: 100%; border: 0; background: transparent; text-align: left; padding: 0.55rem 0.75rem; color: var(--admin-text); cursor: pointer; font-size: 0.82rem; }
+        .row-menu-list button:hover { background: #f8f4ef; color: var(--admin-primary); }
+        .order-drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.18); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; z-index: 1200; }
+        .order-drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(460px, 92vw); background: #fff; box-shadow: -8px 0 24px rgba(0,0,0,0.14); transform: translateX(100%); transition: transform 0.22s ease; z-index: 1201; display: flex; flex-direction: column; }
+        .order-drawer.open { transform: translateX(0); }
+        .order-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+        .drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.1rem; border-bottom: 1px solid var(--admin-border); }
+        .drawer-header h3 { margin: 0; color: var(--admin-primary); font-size: 1.15rem; }
+        .drawer-close { border: 0; background: transparent; font-size: 1.45rem; line-height: 1; color: var(--admin-text-light); cursor: pointer; padding: 0.2rem; }
+        .drawer-close:hover { color: var(--admin-primary); }
+        .drawer-tabs { display: flex; border-bottom: 1px solid var(--admin-border); }
+        .drawer-tab { flex: 1; border: 0; background: #fff; padding: 0.7rem 0.8rem; font-size: 0.76rem; letter-spacing: 0.04em; font-weight: 700; color: var(--admin-text-light); cursor: pointer; }
+        .drawer-tab.active { color: var(--admin-primary); border-bottom: 2px solid var(--admin-primary); }
+        .drawer-body { padding: 1rem 1.1rem 1.2rem; overflow-y: auto; }
+        .drawer-section { margin-bottom: 1rem; }
+        .drawer-section h4 { margin: 0 0 0.55rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--admin-text-light); }
+        .drawer-line { display: flex; justify-content: space-between; gap: 0.9rem; margin-bottom: 0.35rem; font-size: 0.88rem; }
+        .drawer-line span:last-child { text-align: right; }
+        .drawer-note { font-size: 0.82rem; color: var(--admin-text-light); }
 
         /* Status badges */
         .status-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: capitalize; }
@@ -84,13 +135,20 @@
         @media (max-width: 768px) {
             table { font-size: 0.8rem; }
             td, th { padding: 0.5rem; }
+            .orders-table .items-col,
+            .orders-table .shipping-col { display: none; }
+        }
+        @media (max-width: 980px) {
+            .orders-table .items-col,
+            .orders-table .shipping-col { display: none; }
+            .orders-table .customer-col { min-width: 150px; }
         }
     </style>
 </head>
 <body>
     <header>
         <nav class="navbar navbar-centered">
-            <a href="/" class="logo"><img src="/images/logo/bakehouse_logo.jpg" alt="Bakehouse"></a>
+            <a href="/" class="logo"><img src="/images/logo/dc_flat_logo.svg" alt="Date &amp; Crumb"></a>
             <ul class="nav-links">
                 <li><a href="/">Home</a></li>
                 <li><a href="/products.html">Products</a></li>
@@ -127,21 +185,26 @@
             <label for="edit-status">Status</label>
             <select id="edit-status">
                 <option value="pending">Pending</option>
-                <option value="ready_to_ship">Ready to Ship</option>
-                <option value="shipped">Shipped</option>
-                <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
             </select>
-            <label for="edit-tracking">Tracking Number <span id="tracking-required" style="color:var(--admin-danger); display:none;">*</span></label>
-            <input type="text" id="edit-tracking" placeholder="Enter tracking number">
-            <label for="edit-carrier">Carrier <span id="carrier-required" style="color:var(--admin-danger); display:none;">*</span></label>
-            <input type="text" id="edit-carrier" placeholder="e.g. UPS, FedEx, USPS">
             <div class="modal-actions">
                 <button class="modal-cancel" onclick="closeEditModal()">Cancel</button>
                 <button class="modal-save" onclick="saveEdit()">Save</button>
             </div>
         </div>
     </div>
+    <div class="order-drawer-backdrop" id="order-drawer-backdrop" onclick="closeOrderDrawer()"></div>
+    <aside class="order-drawer" id="order-drawer" aria-hidden="true">
+        <div class="drawer-header">
+            <h3 id="drawer-title">Order</h3>
+            <button class="drawer-close" type="button" aria-label="Close details" onclick="closeOrderDrawer()">×</button>
+        </div>
+        <div class="drawer-tabs">
+            <button class="drawer-tab active" id="drawer-tab-details" type="button" onclick="switchDrawerTab('details')">ORDER DETAILS</button>
+            <button class="drawer-tab" id="drawer-tab-customer" type="button" onclick="switchDrawerTab('customer')">CUSTOMER</button>
+        </div>
+        <div class="drawer-body" id="drawer-body"></div>
+    </aside>
 
     <script>
         // Tabs
@@ -160,15 +223,271 @@
             return d.innerHTML;
         }
 
+        function labelStatusLabel(status) {
+            const normalized = String(status || 'not_created').trim().toLowerCase();
+            if (normalized === 'ready') return 'Ready';
+            if (normalized === 'creating') return 'Creating…';
+            if (normalized === 'failed') return 'Failed';
+            return 'Not created';
+        }
+
+        let ordersCache = [];
+        let drawerOrderId = null;
+        let drawerTab = 'details';
+        let customerOrderCounts = {};
+
+        function formatOrderDate(dateStr) {
+            const dt = new Date(dateStr);
+            if (isNaN(dt.getTime())) return '—';
+            return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function money(value) {
+            const n = Number(value);
+            return Number.isFinite(n) ? `$${n.toFixed(2)}` : '—';
+        }
+
+        function buildTrackingUrl(carrier, trackingCode, trackerUrl) {
+            if (trackerUrl) return trackerUrl;
+            if (!trackingCode) return null;
+            const c = String(carrier || '').toLowerCase();
+            if (c.includes('usps'))  return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingCode}`;
+            if (c.includes('ups'))   return `https://www.ups.com/track?tracknum=${trackingCode}`;
+            if (c.includes('fedex')) return `https://www.fedex.com/apps/fedextrack/?tracknumbers=${trackingCode}`;
+            if (c.includes('dhl'))   return `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${trackingCode}`;
+            return `https://parcelsapp.com/en/tracking/${trackingCode}`;
+        }
+
+        function shortTracking(code) {
+            const text = String(code || '');
+            if (text.length <= 12) return text;
+            return `${text.slice(0, 4)}...${text.slice(-4)}`;
+        }
+
+        function summarizeItems(items) {
+            if (!Array.isArray(items) || items.length === 0) return 'No items';
+            if (items.length === 1) {
+                const one = items[0];
+                return `${one.name} × ${one.quantity}`;
+            }
+            const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+            return `${totalQty} items; ${items[0].name} +${items.length - 1} more`;
+        }
+
+        function renderShippingChoiceControl(orderId, isRetry = false, idPrefix = 'ship-action') {
+            const selectId = `${idPrefix}-${orderId}`;
+            return `
+                <div class="ship-action-row">
+                    <select id="${selectId}" class="ship-action-select" aria-label="Shipping action for order #${orderId}">
+                        <option value="create_label">${isRetry ? 'Retry Label' : 'Create Label'}</option>
+                        <option value="custom_delivery">Custom Delivery</option>
+                    </select>
+                    <button class="edit-btn ship-action-btn" onclick="runShippingAction(${orderId}, '${selectId}', this)">Go</button>
+                </div>
+            `;
+        }
+
+        function renderShippingCell(order) {
+            const labelState = String(order.label_status || 'not_created').trim().toLowerCase();
+            const orderStatus = String(order.status || '').trim().toLowerCase();
+            const code = order.label_tracking_code || order.tracking_number || '';
+            const carrier = order.label_carrier || order.carrier || '';
+            const trackingUrl = code ? buildTrackingUrl(carrier, code, order.label_tracker_url) : null;
+            const trackingNumberHtml = trackingUrl
+                ? `<a class="text-link" href="${esc(trackingUrl)}" target="_blank" rel="noopener" style="margin-top:0; font-family:monospace;">${esc(shortTracking(code))}</a>`
+                : `<span style="font-family:monospace;">${esc(shortTracking(code))}</span>`;
+            const trackLineHtml = carrier && code
+                ? `${esc(carrier)} • ${trackingNumberHtml}`
+                : (code ? trackingNumberHtml : esc(shortTracking(carrier || 'Label ready')));
+
+            if (labelState === 'creating') {
+                return `
+                    <div class="ship-stack">
+                        <div class="ship-main">Creating label…</div>
+                        <button class="edit-btn create-label-btn" disabled style="opacity:0.65; cursor:not-allowed;">Creating…</button>
+                    </div>
+                `;
+            }
+
+            if (labelState === 'ready' && order.label_storage_path) {
+                if (String(order.status || '').toLowerCase() === 'shipped') {
+                    return `
+                        <div class="ship-stack">
+                            <div class="ship-main">Shipped</div>
+                            <div class="ship-sub">${trackLineHtml}</div>
+                            <a class="text-link" href="/api/admin/orders/${order.id}/shipping-label" target="_blank" rel="noopener">View Label ›</a>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="ship-stack">
+                        <div class="ship-main">${trackLineHtml}</div>
+                        <a class="text-link" href="/api/admin/orders/${order.id}/shipping-label" target="_blank" rel="noopener">View Label ›</a>
+                    </div>
+                `;
+            }
+
+            if (orderStatus === 'shipped') {
+                const shippedVia = carrier || 'Custom Delivery';
+                return `
+                    <div class="ship-stack">
+                        <div class="ship-main">Shipped</div>
+                        <div class="ship-sub">${code ? trackLineHtml : esc(shippedVia)}</div>
+                    </div>
+                `;
+            }
+
+            const failedHint = labelState === 'failed' && order.label_error
+                ? `<div class="ship-sub" style="color:var(--admin-danger);">${esc(order.label_error)}</div>`
+                : '';
+            const isCancelled = orderStatus === 'cancelled';
+            const shippingControl = isCancelled
+                ? '<button class="edit-btn create-label-btn" disabled style="opacity:0.65; cursor:not-allowed;">Unavailable</button>'
+                : renderShippingChoiceControl(order.id, labelState === 'failed');
+
+            return `
+                <div class="ship-stack">
+                    <div class="ship-main">No label</div>
+                    ${shippingControl}
+                    ${failedHint}
+                </div>
+            `;
+        }
+
+        function closeRowMenu(node) {
+            const details = node.closest('details');
+            if (details) details.removeAttribute('open');
+        }
+        document.addEventListener('click', (event) => {
+            if (event.target.closest('.row-menu')) return;
+            document.querySelectorAll('.row-menu[open]').forEach(menu => menu.removeAttribute('open'));
+        });
+
+        function getOrderById(orderId) {
+            return ordersCache.find(o => Number(o.id) === Number(orderId)) || null;
+        }
+
+        function openOrderDrawer(orderId, tab = 'details') {
+            drawerOrderId = Number(orderId);
+            drawerTab = tab === 'customer' ? 'customer' : 'details';
+            document.getElementById('order-drawer').classList.add('open');
+            document.getElementById('order-drawer-backdrop').classList.add('open');
+            document.getElementById('order-drawer').setAttribute('aria-hidden', 'false');
+            renderOrderDrawer();
+        }
+
+        function closeOrderDrawer() {
+            document.getElementById('order-drawer').classList.remove('open');
+            document.getElementById('order-drawer-backdrop').classList.remove('open');
+            document.getElementById('order-drawer').setAttribute('aria-hidden', 'true');
+            drawerOrderId = null;
+        }
+
+        function switchDrawerTab(tab) {
+            drawerTab = tab === 'customer' ? 'customer' : 'details';
+            renderOrderDrawer();
+        }
+
+        function renderOrderDrawer() {
+            const order = getOrderById(drawerOrderId);
+            if (!order) return;
+
+            const detailsTabBtn = document.getElementById('drawer-tab-details');
+            const customerTabBtn = document.getElementById('drawer-tab-customer');
+            detailsTabBtn.classList.toggle('active', drawerTab === 'details');
+            customerTabBtn.classList.toggle('active', drawerTab === 'customer');
+            document.getElementById('drawer-title').textContent = `Order #${order.id}`;
+
+            const customerName = `${order.customer_first_name || ''} ${order.customer_last_name || ''}`.trim() || order.customer_name || '—';
+            const shippingAddress = [
+                order.shipping_address,
+                order.shipping_address2,
+                [order.shipping_city, order.shipping_state, order.shipping_zip].filter(Boolean).join(' ')
+            ].filter(Boolean).join(', ');
+
+            const panel = document.getElementById('drawer-body');
+            if (drawerTab === 'customer') {
+                const count = customerOrderCounts[String(order.customer_email || '').toLowerCase()] || 1;
+                panel.innerHTML = `
+                    <div class="drawer-section">
+                        <h4>Customer</h4>
+                        <div class="drawer-line"><span>Name</span><span>${esc(customerName)}</span></div>
+                        <div class="drawer-line"><span>Email</span><span>${esc(order.customer_email || '—')}</span></div>
+                        <div class="drawer-line"><span>Phone</span><span>${esc(order.customer_phone || '—')}</span></div>
+                        <div class="drawer-line"><span>Previous orders</span><span>${Math.max(0, count - 1)}</span></div>
+                    </div>
+                    <div class="drawer-section">
+                        <h4>Shipping address</h4>
+                        <div class="drawer-note">${esc(shippingAddress || '—')}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const statusLabel = { pending: 'Pending', shipped: 'Shipped', cancelled: 'Cancelled' }[order.status] || order.status;
+            const code = order.label_tracking_code || order.tracking_number;
+            const carrier = order.label_carrier || order.carrier;
+            const trackingUrl = code ? buildTrackingUrl(carrier, code, order.label_tracker_url) : null;
+            const shippingLineHtml = code
+                ? (carrier
+                    ? `${esc(carrier)} • ${trackingUrl ? `<a class="text-link" href="${esc(trackingUrl)}" target="_blank" rel="noopener" style="margin-top:0; font-family:monospace;">${esc(code)}</a>` : `<span style="font-family:monospace;">${esc(code)}</span>`}`
+                    : `${trackingUrl ? `<a class="text-link" href="${esc(trackingUrl)}" target="_blank" rel="noopener" style="margin-top:0; font-family:monospace;">${esc(code)}</a>` : `<span style="font-family:monospace;">${esc(code)}</span>`}`)
+                : esc(carrier || '—');
+            const itemLines = (order.items || []).map(item => `
+                <div class="drawer-line">
+                    <span>${esc(item.name)} × ${item.quantity}</span>
+                    <span>${money((Number(item.unit_price) || 0) * (Number(item.quantity) || 0))}</span>
+                </div>
+            `).join('');
+
+            panel.innerHTML = `
+                <div class="drawer-section">
+                    <h4>Items</h4>
+                    ${itemLines || '<div class="drawer-note">No items found.</div>'}
+                </div>
+                <div class="drawer-section">
+                    <h4>Totals</h4>
+                    <div class="drawer-line"><span>Subtotal</span><span>${money(order.subtotal)}</span></div>
+                    <div class="drawer-line"><span>Shipping</span><span>${money(order.shipping_cost ?? order.shipping_fee ?? order.shipping_total)}</span></div>
+                    <div class="drawer-line"><span>Tax</span><span>${money(order.tax ?? order.tax_total)}</span></div>
+                    <div class="drawer-line"><span><strong>Total</strong></span><span><strong>${money(order.total)}</strong></span></div>
+                </div>
+                <div class="drawer-section">
+                    <h4>Order</h4>
+                    <div class="drawer-line"><span>Order status</span><span>${esc(statusLabel)}</span></div>
+                    <div class="drawer-line"><span>Payment status</span><span>${esc(order.payment_status || (order.payment_intent_id ? 'Paid' : '—'))}</span></div>
+                    <div class="drawer-line"><span>Placed</span><span>${esc(formatOrderDate(order.created_at))}</span></div>
+                </div>
+                <div class="drawer-section">
+                    <h4>Shipping & tracking</h4>
+                    <div class="drawer-line"><span>Tracking</span><span>${shippingLineHtml}</span></div>
+                    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                        ${order.label_storage_path
+                            ? `<a class="edit-btn" href="/api/admin/orders/${order.id}/shipping-label" target="_blank" rel="noopener" style="text-decoration:none;">View Label</a>`
+                            : (String(order.status || '').toLowerCase() === 'pending'
+                                ? renderShippingChoiceControl(order.id, String(order.label_status || '').toLowerCase() === 'failed', 'drawer-ship-action')
+                                : '')}
+                    </div>
+                </div>
+            `;
+        }
+
         // Load stats
         async function loadStats() {
             const res = await fetch('/api/admin/stats');
             const s = await res.json();
+            const production = Array.isArray(s.pendingProduction) ? s.pendingProduction : [];
+            const productionTotal = production.reduce((sum, row) => sum + (Number(row.total_boxes) || 0), 0);
+            const productionHtml = production.length
+                ? `<div class="value" style="font-size:1.5rem;">${productionTotal}</div><div class="muted-meta" style="margin-top:0.15rem;">Total pending boxes</div><div class="production-list">${production.map(row => `
+                    <div class="production-line">${esc(row.product_name || `Item #${row.product_id}`)}: <strong>${Number(row.total_boxes) || 0}</strong></div>
+                `).join('')}</div>`
+                : '<div class="production-empty">No pending boxes</div>';
             document.getElementById('stats').innerHTML = `
-                <div class="stat-card"><div class="label">Total Orders</div><div class="value">${s.totalOrders}</div></div>
                 <div class="stat-card"><div class="label">Pending Orders</div><div class="value">${s.pendingOrders}</div></div>
+                <div class="stat-card"><div class="label">Pending Production</div>${productionHtml}</div>
                 <div class="stat-card"><div class="label">Revenue</div><div class="value">$${parseFloat(s.totalRevenue).toFixed(2)}</div></div>
-                <div class="stat-card"><div class="label">Users</div><div class="value">${s.totalUsers}</div></div>
             `;
         }
 
@@ -176,32 +495,53 @@
         async function loadOrders() {
             const res = await fetch('/api/admin/orders');
             const orders = await res.json();
+            ordersCache = Array.isArray(orders) ? orders : [];
+            customerOrderCounts = ordersCache.reduce((acc, order) => {
+                const key = String(order.customer_email || '').toLowerCase();
+                if (!key) return acc;
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+            }, {});
             const panel = document.getElementById('panel-orders');
 
-            if (orders.length === 0) {
+            if (ordersCache.length === 0) {
                 panel.innerHTML = '<div class="empty">No orders yet.</div>';
                 return;
             }
 
-            panel.innerHTML = `<table>
-                <thead><tr><th>ID</th><th>Customer</th><th>Email</th><th>Phone</th><th>Address</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking #</th><th>Carrier</th><th>Date</th><th></th></tr></thead>
-                <tbody>${orders.map(o => {
-                    const statusLabel = o.status === 'ready_to_ship' ? 'Ready to Ship' : o.status;
+            panel.innerHTML = `<table class="orders-table">
+                <thead><tr><th class="order-col">Order</th><th class="customer-col">Customer</th><th class="items-col">Items</th><th class="total-col">Total</th><th class="status-col">Status</th><th class="shipping-col">Shipping</th><th class="actions-col">Actions</th></tr></thead>
+                <tbody>${ordersCache.map(o => {
+                    const statusLabel = { pending: 'Pending', shipped: 'Shipped', cancelled: 'Cancelled' }[o.status] || o.status;
                     const orderCustomerName = `${o.customer_first_name || ''} ${o.customer_last_name || ''}`.trim() || o.customer_name || '—';
+                    const itemSummary = summarizeItems(o.items || []);
                     return `
                     <tr>
-                        <td>#${o.id}</td>
-                        <td>${esc(orderCustomerName)}</td>
-                        <td>${esc(o.customer_email)}</td>
-                        <td>${o.customer_phone ? esc(o.customer_phone) : '—'}</td>
-                        <td>${esc(o.shipping_address)}, ${esc(o.shipping_city)} ${esc(o.shipping_zip)}</td>
-                        <td class="order-items">${o.items.map(i => `<span>${esc(i.name)} × ${i.quantity}</span>`).join('')}</td>
-                        <td><strong>$${parseFloat(o.total).toFixed(2)}</strong></td>
-                        <td><span class="status-badge status-${o.status}">${statusLabel}</span></td>
-                        <td>${o.tracking_number ? esc(o.tracking_number) : '—'}</td>
-                        <td>${o.carrier ? esc(o.carrier) : '—'}</td>
-                        <td>${new Date(o.created_at).toLocaleDateString()}</td>
-                        <td><button class="edit-btn" onclick="openEditModal(${o.id}, '${o.status}', '${esc(o.tracking_number || '')}', '${esc(o.carrier || '')}')">Edit</button></td>
+                        <td class="order-col">
+                            <a href="#" class="order-link" onclick="openOrderDrawer(${o.id}, 'details'); return false;">#${o.id}</a>
+                            <div class="muted-meta">${esc(formatOrderDate(o.created_at))}</div>
+                        </td>
+                        <td class="customer-col">
+                            <div>${esc(orderCustomerName)}</div>
+                            <div class="muted-meta">${esc(o.customer_email || '—')}</div>
+                            <a href="#" class="text-link" onclick="openOrderDrawer(${o.id}, 'customer'); return false;">View customer ›</a>
+                        </td>
+                        <td class="items-col">
+                            <a href="#" class="item-summary-link" onclick="openOrderDrawer(${o.id}, 'details'); return false;">${esc(itemSummary)}</a>
+                            <a href="#" class="text-link" onclick="openOrderDrawer(${o.id}, 'details'); return false;">View order ›</a>
+                        </td>
+                        <td class="total-col"><span class="total-amount">${money(o.total)}</span></td>
+                        <td class="status-col"><span class="status-badge status-${o.status}">${statusLabel}</span></td>
+                        <td class="shipping-col">${renderShippingCell(o)}</td>
+                        <td class="actions-col">
+                            <details class="row-menu">
+                                <summary aria-label="Order actions">•••</summary>
+                                <div class="row-menu-list">
+                                    <button type="button" onclick="closeRowMenu(this); openOrderDrawer(${o.id}, 'details')">View details</button>
+                                    <button type="button" onclick="closeRowMenu(this); cancelOrder(${o.id})">Cancel order</button>
+                                </div>
+                            </details>
+                        </td>
                     </tr>`;
                 }).join('')}</tbody>
             </table>`;
@@ -209,78 +549,48 @@
 
         // Edit modal
         let editOrderId = null;
-        let editOriginalStatus = null;
 
-        // Define which statuses are allowed from each current status
         const allowedTransitions = {
-            pending:       ['pending', 'ready_to_ship', 'shipped', 'cancelled'],
-            ready_to_ship: ['ready_to_ship', 'shipped', 'cancelled'],
-            shipped:       ['shipped', 'delivered'],
-            delivered:     ['delivered'],
-            cancelled:     ['cancelled'],
+            pending:   ['pending', 'cancelled'],
+            shipped:   ['cancelled'],
+            cancelled: ['cancelled'],
         };
 
         const statusLabels = {
-            pending: 'Pending',
-            ready_to_ship: 'Ready to Ship',
-            shipped: 'Shipped',
-            delivered: 'Delivered',
+            pending:   'Pending',
+            shipped:   'Shipped',
             cancelled: 'Cancelled',
         };
 
-        function updateRequiredIndicators() {
-            const status = document.getElementById('edit-status').value;
-            const show = status === 'shipped';
-            document.getElementById('tracking-required').style.display = show ? 'inline' : 'none';
-            document.getElementById('carrier-required').style.display = show ? 'inline' : 'none';
-        }
-
-        function openEditModal(id, status, tracking, carrier) {
+        function openEditModal(id, status) {
             editOrderId = id;
-            editOriginalStatus = status;
             document.getElementById('edit-order-id').textContent = id;
-            document.getElementById('edit-tracking').value = tracking;
-            document.getElementById('edit-carrier').value = carrier;
             document.getElementById('edit-error').style.display = 'none';
 
-            // Populate status dropdown with only allowed transitions
             const select = document.getElementById('edit-status');
             const allowed = allowedTransitions[status] || [status];
             select.innerHTML = allowed.map(s => `<option value="${s}">${statusLabels[s] || s}</option>`).join('');
             select.value = status;
 
-            updateRequiredIndicators();
             document.getElementById('edit-modal').classList.add('open');
         }
-
-        // Update required indicators when status changes
-        document.getElementById('edit-status').addEventListener('change', updateRequiredIndicators);
 
         function closeEditModal() {
             document.getElementById('edit-modal').classList.remove('open');
             editOrderId = null;
-            editOriginalStatus = null;
         }
 
         async function saveEdit() {
+            const targetOrderId = editOrderId;
             const status = document.getElementById('edit-status').value;
-            const tracking_number = document.getElementById('edit-tracking').value.trim();
-            const carrier = document.getElementById('edit-carrier').value.trim();
             const errorDiv = document.getElementById('edit-error');
             errorDiv.style.display = 'none';
 
-            // Client-side validation
-            if (status === 'shipped' && (!tracking_number || !carrier)) {
-                errorDiv.textContent = 'Tracking number and carrier are required when shipping an order.';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
             try {
-                const res = await fetch('/api/admin/orders/' + editOrderId + '/status', {
+                const res = await fetch('/api/admin/orders/' + targetOrderId + '/status', {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status, tracking_number, carrier }),
+                    body: JSON.stringify({ status }),
                 });
                 const data = await res.json();
 
@@ -292,37 +602,167 @@
 
                 closeEditModal();
                 loadStats();
-                loadOrders();
+                await loadOrders();
+                if (drawerOrderId === Number(targetOrderId)) {
+                    renderOrderDrawer();
+                }
             } catch (err) {
                 errorDiv.textContent = 'Something went wrong. Please try again.';
                 errorDiv.style.display = 'block';
             }
         }
 
-        // Load users
-        async function loadUsers() {
-            const res = await fetch('/api/admin/users');
-            const users = await res.json();
-            const panel = document.getElementById('panel-users');
-
-            if (users.length === 0) {
-                panel.innerHTML = '<div class="empty">No users yet.</div>';
-                return;
+        async function createLabel(orderId, btn) {
+            const originalText = btn ? btn.textContent : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Creating…';
             }
 
-            panel.innerHTML = `<table>
-                <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Provider</th><th>Verified</th><th>Joined</th></tr></thead>
+            try {
+                const res = await fetch('/api/admin/orders/' + orderId + '/shipping-label', {
+                    method: 'POST',
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to create shipping label.');
+                }
+                await loadStats();
+                await loadOrders();
+                if (drawerOrderId === Number(orderId)) {
+                    renderOrderDrawer();
+                }
+            } catch (err) {
+                alert(err.message || 'Failed to create shipping label.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = originalText || 'Create Label';
+                }
+            }
+        }
+
+        async function markCustomDelivery(orderId, btn) {
+            const originalText = btn ? btn.textContent : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Applying…';
+            }
+            try {
+                const res = await fetch('/api/admin/orders/' + orderId + '/custom-delivery', {
+                    method: 'POST',
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to apply custom delivery.');
+                }
+                await loadStats();
+                await loadOrders();
+                if (drawerOrderId === Number(orderId)) {
+                    renderOrderDrawer();
+                }
+            } catch (err) {
+                alert(err.message || 'Failed to apply custom delivery.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = originalText || 'Go';
+                }
+            }
+        }
+
+        async function runShippingAction(orderId, selectId, btn) {
+            const select = document.getElementById(selectId);
+            const action = select ? select.value : 'create_label';
+            if (action === 'custom_delivery') {
+                await markCustomDelivery(orderId, btn);
+                return;
+            }
+            await createLabel(orderId, btn);
+        }
+
+        async function cancelOrder(orderId) {
+            try {
+                const res = await fetch('/api/admin/orders/' + orderId + '/status', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'cancelled' }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || 'Failed to cancel order.');
+                    return;
+                }
+                await loadStats();
+                await loadOrders();
+                if (drawerOrderId === Number(orderId)) {
+                    renderOrderDrawer();
+                }
+            } catch (err) {
+                alert('Failed to cancel order.');
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            const [usersRes, requestsRes] = await Promise.all([
+                fetch('/api/admin/users'),
+                fetch('/api/admin/user-requests')
+            ]);
+            const users = await usersRes.json();
+            const requests = await requestsRes.json();
+            const panel = document.getElementById('panel-users');
+
+            const pending = requests.filter(r => r.status === 'pending_admin_approval');
+            const pendingSection = pending.length === 0 ? `
+                <div style="margin-bottom:1rem; background:#fff; border:1px solid var(--admin-border); border-radius:8px; padding:1rem;">
+                    <strong>No pending user approvals.</strong>
+                </div>
+            ` : `
+                <table style="margin-bottom:1rem;">
+                    <thead><tr><th colspan="7">Pending User Approvals</th></tr><tr><th>ID</th><th>Name</th><th>Username</th><th>Email</th><th>Email Verified</th><th>Requested</th><th></th></tr></thead>
+                    <tbody>${pending.map(r => `
+                        <tr>
+                            <td>${r.id}</td>
+                            <td>${esc((`${r.first_name || ''} ${r.last_name || ''}`).trim() || '—')}</td>
+                            <td>${esc(r.username)}</td>
+                            <td>${esc(r.email)}</td>
+                            <td class="${r.email_verified_at ? 'verified-yes' : 'verified-no'}">${r.email_verified_at ? 'Yes' : 'No'}</td>
+                            <td>${new Date(r.created_at).toLocaleDateString()}</td>
+                            <td><button class="edit-btn" onclick="approveUserRequest(${r.id})">Approve</button></td>
+                        </tr>
+                    `).join('')}</tbody>
+                </table>
+            `;
+
+            const usersSection = users.length === 0 ? '<div class="empty">No users yet.</div>' : `<table>
+                <thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Email</th><th>Admin</th><th>Verified</th><th>Joined</th></tr></thead>
                 <tbody>${users.map(u => `
                     <tr>
                         <td>${u.id}</td>
-                        <td>${esc((`${u.first_name || ''} ${u.last_name || ''}`).trim() || u.name || '—')}</td>
+                        <td>${esc((`${u.first_name || ''} ${u.last_name || ''}`).trim() || u.username || '—')}</td>
+                        <td>${esc(u.username || '—')}</td>
                         <td>${esc(u.email)}</td>
-                        <td>${esc(u.provider)}</td>
+                        <td>${u.is_admin ? 'Yes' : 'No'}</td>
                         <td class="${u.verified ? 'verified-yes' : 'verified-no'}">${u.verified ? 'Yes' : 'No'}</td>
                         <td>${new Date(u.created_at).toLocaleDateString()}</td>
                     </tr>
                 `).join('')}</tbody>
             </table>`;
+
+            panel.innerHTML = `${pendingSection}${usersSection}`;
+        }
+
+        async function approveUserRequest(requestId) {
+            try {
+                const res = await fetch('/api/admin/user-requests/' + requestId + '/approve', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || 'Failed to approve user.');
+                    return;
+                }
+                await Promise.all([loadUsers(), loadStats()]);
+            } catch (err) {
+                alert('Failed to approve user.');
+            }
         }
 
         // Load products
@@ -351,6 +791,10 @@
         loadOrders();
         loadUsers();
         loadProducts();
+        setInterval(() => {
+            loadStats();
+            loadOrders();
+        }, 15000);
 
         async function toggleOutOfStock(productId, newValue) {
             try {

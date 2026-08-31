@@ -13,6 +13,9 @@ if (process.env.STRIPE_SECRET_KEY) {
     console.log('Stripe not configured — set STRIPE_SECRET_KEY env var.');
 }
 
+const SHIPPING_FLAT_RATE_CENTS = 499;
+const FREE_SHIPPING_THRESHOLD_CENTS = 5000;
+
 // ========================================================
 // Helpers
 // ========================================================
@@ -64,6 +67,12 @@ function addressesMatch(a, b) {
         normalizePostalCode(a.postal_code) === normalizePostalCode(b.postal_code) &&
         normalizeState(a.country || 'US') === normalizeState(b.country || 'US')
     );
+}
+
+function getShippingChargeInCents(subtotalInCents) {
+    return subtotalInCents <= FREE_SHIPPING_THRESHOLD_CENTS
+        ? SHIPPING_FLAT_RATE_CENTS
+        : 0;
 }
 
 function normalizeCartForComparison(items) {
@@ -239,6 +248,7 @@ router.post('/stripe/calculate-tax', async (req, res) => {
 
     try {
         const { resolvedItems, subtotalInCents } = await resolveCartFromDatabase(db, items);
+        const shippingInCents = getShippingChargeInCents(subtotalInCents);
 
         const taxLineItems = resolvedItems.map((item) => {
             const line = {
@@ -278,8 +288,9 @@ router.post('/stripe/calculate-tax', async (req, res) => {
         return res.json({
             taxCalculationId: taxCalculation.id,
             subtotal: subtotalInCents,
+            shipping: shippingInCents,
             tax: taxCalculation.tax_amount_exclusive,
-            total: taxCalculation.amount_total,
+            total: Number(taxCalculation.amount_total) + shippingInCents,
             expiresAt: taxCalculation.expires_at,
         });
     } catch (err) {
@@ -323,6 +334,7 @@ router.post('/stripe/create-intent', async (req, res) => {
     try {
         // Re-resolve current DB prices/availability before taking payment.
         const { resolvedItems, subtotalInCents } = await resolveCartFromDatabase(db, items);
+        const shippingInCents = getShippingChargeInCents(subtotalInCents);
 
         const taxCalculation = await stripe.tax.calculations.retrieve(tax_calculation_id);
 
@@ -388,7 +400,7 @@ router.post('/stripe/create-intent', async (req, res) => {
         };
 
         const paymentIntentParams = {
-            amount: taxCalculation.amount_total,
+            amount: Number(taxCalculation.amount_total) + shippingInCents,
             currency: 'usd',
             payment_method_types: ['card'],
 
@@ -410,6 +422,7 @@ router.post('/stripe/create-intent', async (req, res) => {
             metadata: {
                 tax_calculation_id: taxCalculation.id,
                 cart_subtotal_cents: String(subtotalInCents),
+                shipping_cents: String(shippingInCents),
             },
         };
 
@@ -424,8 +437,9 @@ router.post('/stripe/create-intent', async (req, res) => {
             paymentIntentId: paymentIntent.id,
             taxCalculationId: taxCalculation.id,
             subtotal: subtotalInCents,
+            shipping: shippingInCents,
             tax: taxCalculation.tax_amount_exclusive,
-            total: taxCalculation.amount_total,
+            total: Number(taxCalculation.amount_total) + shippingInCents,
         });
     } catch (err) {
         console.error('Stripe PaymentIntent error:', err);

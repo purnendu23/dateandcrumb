@@ -40,9 +40,13 @@ async function seed() {
         await conn.query(`
             SET FOREIGN_KEY_CHECKS = 0;
             DROP TABLE IF EXISTS validated_addresses;
+            DROP TABLE IF EXISTS admin_login_attempts;
+            DROP TABLE IF EXISTS user_registration_requests;
             DROP TABLE IF EXISTS address_book;
+            DROP TABLE IF EXISTS shipping_labels;
             DROP TABLE IF EXISTS order_items;
             DROP TABLE IF EXISTS orders;
+            DROP TABLE IF EXISTS customers;
             DROP TABLE IF EXISTS products;
             DROP TABLE IF EXISTS categories;
             DROP TABLE IF EXISTS sessions;
@@ -63,16 +67,24 @@ async function seed() {
             for (const u of adminUsers) {
                 await conn.execute(
                     `INSERT INTO users (
-                        id, email, first_name, last_name, password_hash, name, provider, provider_id,
-                        verified, verification_token, reset_token, reset_token_expires, is_admin, phone,
-                        organization, shipping_address, shipping_address2, shipping_city, shipping_state,
-                        shipping_zip, created_at
-                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        id, email, username, first_name, last_name, password_hash,
+                        verified, reset_token, reset_token_expires, is_admin, phone,
+                        organization, created_at
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
-                        u.id, u.email, u.first_name || null, u.last_name || null, u.password_hash, u.name,
-                        u.provider, u.provider_id, u.verified, u.verification_token, u.reset_token || null,
-                        u.reset_token_expires || null, u.is_admin, u.phone, u.organization, u.shipping_address,
-                        u.shipping_address2, u.shipping_city, u.shipping_state, u.shipping_zip, u.created_at
+                        u.id,
+                        u.email,
+                        u.username || String(u.email || '').split('@')[0],
+                        u.first_name || null,
+                        u.last_name || null,
+                        u.password_hash,
+                        u.verified,
+                        u.reset_token || null,
+                        u.reset_token_expires || null,
+                        u.is_admin,
+                        u.phone,
+                        u.organization,
+                        u.created_at
                     ]
                 );
             }
@@ -103,6 +115,7 @@ async function seed() {
                     description = VALUES(description),
                     price = VALUES(price),
                     image_url = VALUES(image_url),
+                    out_of_stock = VALUES(out_of_stock),
                     featured = VALUES(featured),
                     ingredients = VALUES(ingredients),
                     nutritional_info = VALUES(nutritional_info)`,
@@ -112,7 +125,7 @@ async function seed() {
                     p.price,
                     JSON.stringify(p.images),
                     1,
-                    0,
+                    p.out_of_stock ? 1 : 0,
                     p.featured ? 1 : 0,
                     p.ingredients.trim(),
                     p.nutritional_info.trim()

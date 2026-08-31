@@ -61,6 +61,32 @@ header {
     z-index: 100;
 }
 
+.global-top-stripe {
+    position: sticky;
+    top: 0;
+    z-index: 1100;
+    background: #f7f1e6;
+    border-bottom: 1px solid var(--color-border);
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 1rem;
+}
+
+.global-top-stripe-text {
+    color: var(--color-text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: center;
+    transition: opacity 0.2s ease;
+}
+
+body.has-global-top-stripe header {
+    top: 36px;
+}
+
 .logo {
     display: flex;
     align-items: center;
@@ -530,6 +556,65 @@ header {
     margin-bottom: 1rem;
 }
 
+.product-pack-pricing {
+    margin-bottom: 1.1rem;
+}
+
+.product-pack-pricing-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.product-pack-price {
+    font-size: 1.5rem;
+    line-height: 1;
+    font-weight: 500;
+    color: #c85f3c;
+}
+
+.product-pack-size {
+    font-size: 1.05rem;
+    line-height: 1;
+    color: var(--color-text);
+}
+
+.product-pack-pill {
+    display: inline-flex;
+    align-items: center;
+    border: 2px solid #3d2b1f;
+    color: #3d2b1f;
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.product-pack-shipping {
+    margin-top: 0.95rem;
+    color: #6f7340;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+    .product-pack-price {
+        font-size: 2.3rem;
+    }
+    .product-pack-size,
+    .product-pack-pill {
+        font-size: 0.2rem;
+    }
+    .product-pack-shipping {
+        letter-spacing: 0.08em;
+        font-size: 0.72rem;
+    }
+}
+
 .product-detail-stock {
     font-size: 0.9rem;
     margin-bottom: 1.5rem;
@@ -743,6 +828,11 @@ header {
     border-radius: var(--radius);
     font-size: 0.9rem;
     margin-top: 1rem;
+}
+
+.error-msg.info-msg {
+    background: #eef6ff;
+    color: #1f4f8b;
 }
 
 /* --- Confirmation --- */

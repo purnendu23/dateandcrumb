@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     const productId = params.get('id');
     const container = document.getElementById('product-detail');
+    const PACK_SIZE = 16;
+    const PRICE_PER_BOX = 44.89;
+    const PRICE_PER_BAR = 2.80;
 
     if (!productId) {
         container.innerHTML = '<p>Product not found.</p>';
@@ -56,8 +59,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="product-detail-info">
                 <div class="product-detail-category">${escapeHTML(product.category_name || '')}</div>
                 <h1>${escapeHTML(product.name)}</h1>
-                <div class="product-detail-price">$${parseFloat(product.price).toFixed(2)}</div>
                 <p class="product-detail-desc">${escapeHTML(product.description || '')}</p>
+                <div class="product-pack-pricing">
+                    <div class="product-pack-pricing-row">
+                        <span class="product-pack-price">$${parseFloat(product.price).toFixed(2)}</span>
+                        <span class="product-pack-size">/ ${PACK_SIZE}-pack</span>
+                        <span class="product-pack-pill">$${PRICE_PER_BAR.toFixed(2)}/bar</span>
+                    </div>
+                    <div class="product-pack-shipping">SHIPPING $4.99 FLAT RATE • FREE SHIPPING ON $50+</div>
+                </div>
                 ${!product.out_of_stock ? `
                 <div class="quantity-selector">
                     <label for="qty">Quantity:</label>

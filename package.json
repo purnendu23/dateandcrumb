@@ -1,7 +1,7 @@
 {
-  "name": "bakehouse",
+  "name": "dc",
   "version": "1.0.0",
-  "description": "Bakehouse - Online marketplace for baked goods",
+  "description": "Date & Crumb - Online marketplace healthy snacks",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

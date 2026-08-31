@@ -1,6 +1,9 @@
 /* Products page — Amrita-style single-product showcase with flavor selector */
 document.addEventListener('DOMContentLoaded', async () => {
     const showcase = document.getElementById('product-showcase');
+    const PACK_SIZE = 16;
+    const PRICE_PER_BOX = 44.89;
+    const PRICE_PER_BAR = 2.80;
 
     let products = [];
     try {
@@ -80,9 +83,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="showcase-info">
                 <div class="product-detail-category">${esc(activeProduct.category_name || '')}</div>
                 <h1>${esc(activeProduct.name)}</h1>
-                <div class="product-detail-price">$${parseFloat(activeProduct.price).toFixed(2)}</div>
-
                 <p class="product-detail-desc">${esc(activeProduct.description || '')}</p>
+                <div class="product-pack-pricing">
+                    <div class="product-pack-pricing-row">
+                        <span class="product-pack-price">$${parseFloat(activeProduct.price).toFixed(2)}</span>
+                        <span class="product-pack-size">/ ${PACK_SIZE}-pack</span>
+                        <span class="product-pack-pill">$${PRICE_PER_BAR.toFixed(2)}/bar</span>
+                    </div>
+                    <div class="product-pack-shipping">SHIPPING $4.99 FLAT RATE • FREE SHIPPING ON $50+</div>
+                </div>
 
                 <div class="flavor-selector">
                     <span class="flavor-label">Flavor:</span>

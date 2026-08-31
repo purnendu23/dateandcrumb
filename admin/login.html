@@ -16,20 +16,24 @@
         button { width: 100%; padding: 0.75rem; background: #8b4513; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
         button:hover { background: #6d350f; }
         .error { color: #c0392b; font-size: 0.85rem; text-align: center; margin-bottom: 1rem; display: none; }
+        .meta { margin-top: 1rem; text-align: center; font-size: 0.85rem; color: #666; }
+        .meta a { color: #8b4513; text-decoration: none; font-weight: 600; }
+        .meta a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="card">
-        <img src="/images/logo/bakehouse_logo.jpg" alt="Bakehouse">
+        <img src="/images/logo/dc_flat_logo.svg" alt="Date &amp; Crumb">
         <h1>Admin Login</h1>
         <div class="error" id="error"></div>
         <form id="login-form">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required autocomplete="email">
+            <label for="identifier">Email or Username</label>
+            <input type="text" id="identifier" name="identifier" required autocomplete="username">
             <label for="password">Password</label>
             <input type="password" id="password" name="password" required autocomplete="current-password">
             <button type="submit">Sign In</button>
         </form>
+        <p class="meta">Need an employee account? <a href="/admin/register.html">Register</a></p>
     </div>
     <script>
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -37,11 +41,11 @@
             const errEl = document.getElementById('error');
             errEl.style.display = 'none';
 
-            const res = await fetch('/api/auth/login', {
+            const res = await fetch('/api/admin/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: document.getElementById('email').value,
+                    identifier: document.getElementById('identifier').value,
                     password: document.getElementById('password').value,
                 }),
             });
@@ -53,18 +57,7 @@
                 return;
             }
 
-            // Check if user is admin
-            const me = await fetch('/api/auth/me');
-            const user = await me.json();
-            if (!user.is_admin) {
-                // Not admin — log them back out and show error
-                await fetch('/api/auth/logout', { method: 'POST' });
-                errEl.textContent = 'Access denied. Admin privileges required.';
-                errEl.style.display = 'block';
-                return;
-            }
-
-            window.location.href = '/admin/';
+            window.location.href = data.user?.is_admin ? '/admin/' : '/admin/employee.html';
         });
     </script>
 </body>

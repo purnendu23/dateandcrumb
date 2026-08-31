@@ -1,0 +1,20 @@
+name: Variety Pack
+description: >
+  Four of each flavor.
+price: 44.89
+category: Healthy Bars
+featured: true
+out_of_stock: false
+
+images:
+  - /images/rose-delight/front_picture.png
+  - /images/golden-pista/front_picture.png
+  - /images/nut-and-crunch/front_picture.png
+  - /images/cocoa-delight/front_picture.png
+
+ingredients: >
+  Includes all four Date & Crumb flavors (4 bars each): Cardamom Rose Delight, Golden Pista, Nut-n-Crunch Bite, and Midnight Coco Date.
+
+nutritional_info: |
+  Pack Size: 16 bars total
+  Flavor Mix: 4 bars each flavor

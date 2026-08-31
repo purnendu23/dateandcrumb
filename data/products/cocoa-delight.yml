@@ -1,9 +1,10 @@
 name: Midnight Coco Date
 description: >
   A rich cocoa snack with dates, pistachios, cardamom, vanilla, roasted bengal gram flour and almond butter.
-price: 4.00
+price: 44.89
 category: Healthy Bars
 featured: true
+out_of_stock: false
 
 images:
   - /images/cocoa-delight/front_picture.png
@@ -25,4 +26,3 @@ nutritional_info: |
   Dietary Fiber: 3g
   Total Sugars: 11g
   Protein: 4g
-

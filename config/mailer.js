@@ -69,6 +69,33 @@ async function sendVerificationEmail(toEmail, token, baseUrl) {
     return info;
 }
 
+async function sendEnterpriseVerificationEmail(toEmail, token, baseUrl) {
+    const transport = await getTransporter();
+    const verifyUrl = `${baseUrl}/api/admin/auth/verify?token=${encodeURIComponent(token)}`;
+
+    const info = await transport.sendMail({
+        from: process.env.SMTP_FROM || '"Date&Crumb" <noreply@dateandcrumb.com>',
+        to: toEmail,
+        subject: 'Verify your Date&Crumb enterprise account request',
+        html: `
+            <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 2rem;">
+                <h2 style="color: #8b4513;">Verify your enterprise account request</h2>
+                <p>Please verify your company email to continue your employee account request.</p>
+                <a href="${verifyUrl}" style="display: inline-block; background: #b5651d; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 1rem 0;">Verify Enterprise Email</a>
+                <p style="color: #666; font-size: 0.9rem;">After verification, an admin must approve your request before you can log in.</p>
+                <p style="color: #666; font-size: 0.9rem;">Or copy this link into your browser:<br>${verifyUrl}</p>
+            </div>
+        `,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) {
+        console.log('Enterprise verification preview URL:', previewUrl);
+    }
+
+    return info;
+}
+
 async function sendOrderConfirmation(orderData) {
     const transport = await getTransporter();
     const email = buildOrderConfirmationEmail(orderData);
@@ -96,4 +123,4 @@ async function sendOrderConfirmation(orderData) {
     return info;
 }
 
-module.exports = { sendVerificationEmail, sendOrderConfirmation };
+module.exports = { sendVerificationEmail, sendEnterpriseVerificationEmail, sendOrderConfirmation };
