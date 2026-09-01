@@ -57,31 +57,56 @@ async function syncProducts() {
             }
 
             const images = Array.isArray(p.images) ? p.images : (p.images ? [p.images] : []);
-            await conn.execute(
-                `INSERT INTO products (
-                    name, description, price, image_url, category_id, out_of_stock, featured, ingredients, nutritional_info
-                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE
-                    description = VALUES(description),
-                    price = VALUES(price),
-                    image_url = VALUES(image_url),
-                    category_id = VALUES(category_id),
-                    out_of_stock = VALUES(out_of_stock),
-                    featured = VALUES(featured),
-                    ingredients = VALUES(ingredients),
-                    nutritional_info = VALUES(nutritional_info)`,
-                [
-                    String(p.name).trim(),
-                    String(p.description || '').trim(),
-                    Number(p.price),
-                    JSON.stringify(images),
-                    categoryRows[0].id,
-                    p.out_of_stock ? 1 : 0,
-                    p.featured ? 1 : 0,
-                    String(p.ingredients || '').trim(),
-                    String(p.nutritional_info || '').trim(),
-                ]
+            const productName = String(p.name).trim();
+            const productValues = [
+                String(p.description || '').trim(),
+                Number(p.price),
+                JSON.stringify(images),
+                categoryRows[0].id,
+                p.out_of_stock ? 1 : 0,
+                p.featured ? 1 : 0,
+                String(p.ingredients || '').trim(),
+                String(p.nutritional_info || '').trim(),
+                productName,
+            ];
+
+            const [existingRows] = await conn.execute(
+                'SELECT id FROM products WHERE name = ? ORDER BY id ASC LIMIT 1',
+                [productName]
             );
+
+            if (existingRows[0]) {
+                await conn.execute(
+                    `UPDATE products
+                     SET description = ?,
+                         price = ?,
+                         image_url = ?,
+                         category_id = ?,
+                         out_of_stock = ?,
+                         featured = ?,
+                         ingredients = ?,
+                         nutritional_info = ?
+                     WHERE name = ?`,
+                    productValues
+                );
+            } else {
+                await conn.execute(
+                    `INSERT INTO products (
+                        name, description, price, image_url, category_id, out_of_stock, featured, ingredients, nutritional_info
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        productName,
+                        productValues[0],
+                        productValues[1],
+                        productValues[2],
+                        productValues[3],
+                        productValues[4],
+                        productValues[5],
+                        productValues[6],
+                        productValues[7],
+                    ]
+                );
+            }
             syncedCount += 1;
         }
 

@@ -605,9 +605,11 @@ body.has-global-top-stripe header {
     .product-pack-price {
         font-size: 2.3rem;
     }
-    .product-pack-size,
+    .product-pack-size {
+        font-size: 0.68rem;
+    }
     .product-pack-pill {
-        font-size: 0.2rem;
+        font-size: 0.75rem;
     }
     .product-pack-shipping {
         letter-spacing: 0.08em;
