@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node db/seed.js"
+    "migrate": "node server.js --migrate",
+    "seed": "node db/seed.js",
+    "sync:products": "node db/sync-products.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

@@ -554,7 +554,18 @@ app.get('*', (req, res) => {
 
 // --- Start server ---
 async function start() {
-    await runMigrations();
+    const shouldRunMigrations = process.argv.includes('--migrate') || process.env.RUN_MIGRATIONS_ON_START === '1';
+
+    if (process.argv.includes('--migrate')) {
+        await runMigrations();
+        console.log('Database migrations complete.');
+        process.exit(0);
+    }
+
+    if (shouldRunMigrations) {
+        await runMigrations();
+    }
+
     app.listen(PORT, '127.0.0.1', () => {
         console.log(`Bakehouse server running on http://127.0.0.1:${PORT}`);
     });

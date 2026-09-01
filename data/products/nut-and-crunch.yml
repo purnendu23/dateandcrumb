@@ -8,8 +8,8 @@ out_of_stock: false
 
 images:
   - /images/nut-and-crunch/front_picture.png
-  - /images/nut-and-crunch/nakpic_1.png
-  - /images/nut-and-crunch/ingredients_picture.png
+  - /images/nut-and-crunch/back_picture.png
+  - /images/nut-and-crunch/nakpic.png
   - /images/nut-and-crunch/nutrition.png
 
 ingredients: >

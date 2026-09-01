@@ -8,8 +8,8 @@ out_of_stock: false
 
 images:
   - /images/cocoa-delight/front_picture.png
-  - /images/cocoa-delight/nakpic_1.png
-  - /images/cocoa-delight/ingredients_picture.png
+  - /images/cocoa-delight/back_picture.png
+  - /images/cocoa-delight/nakpic.png
   - /images/cocoa-delight/nutrition.png
 
 ingredients: >

@@ -9,8 +9,8 @@ out_of_stock: false
 
 images:
   - /images/golden-pista/front_picture.png
-  - /images/golden-pista/nakpic_1.png
-  - /images/golden-pista/ingredients_picture.png
+  - /images/golden-pista/back_picture.png
+  - /images/golden-pista/nakpic.png
   - /images/golden-pista/nutrition.png
 
 ingredients: >

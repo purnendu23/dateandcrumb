@@ -8,8 +8,8 @@ out_of_stock: false
 
 images:
   - /images/rose-delight/front_picture.png
-  - /images/rose-delight/nakpic_1.png
-  - /images/rose-delight/ingredients_picture.png
+  - /images/rose-delight/back_picture.png
+  - /images/rose-delight/nakpic.png
   - /images/rose-delight/nutrition.png
 
 ingredients: >

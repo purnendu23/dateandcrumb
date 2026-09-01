@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const mainImgWrap = showcase.querySelector('.main-img-wrap');
         if (mainImgWrap) {
             mainImgWrap.addEventListener('click', () => {
-                openLightbox(activeImages[activeImgIndex], activeProduct.name);
+                openLightbox(activeImages, activeImgIndex, activeProduct.name);
             });
         }
     }
@@ -193,9 +193,13 @@ function showToast(message) {
     toast._timeout = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
 }
 
-function openLightbox(src, alt) {
+function openLightbox(images, startIndex, alt) {
     const existing = document.getElementById('lightbox-overlay');
     if (existing) existing.remove();
+
+    const imageList = Array.isArray(images) && images.length > 0 ? images : [''];
+    let currentIndex = Number.isInteger(startIndex) ? startIndex : 0;
+    if (currentIndex < 0 || currentIndex >= imageList.length) currentIndex = 0;
 
     const overlay = document.createElement('div');
     overlay.id = 'lightbox-overlay';
@@ -204,24 +208,70 @@ function openLightbox(src, alt) {
     const closeBtn = document.createElement('button');
     closeBtn.innerHTML = '&times;';
     closeBtn.style.cssText = 'position:absolute;top:1rem;right:1.5rem;background:none;border:none;color:#fff;font-size:2.5rem;cursor:pointer;line-height:1;z-index:10000;';
-    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); overlay.remove(); });
 
     const img = document.createElement('img');
-    img.src = src;
+    img.src = imageList[currentIndex];
     img.alt = alt || '';
     img.style.cssText = 'max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;';
 
+    const prevBtn = document.createElement('button');
+    prevBtn.innerHTML = '&#8249;';
+    prevBtn.setAttribute('aria-label', 'Previous image');
+    prevBtn.style.cssText = 'position:absolute;left:1rem;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);color:#fff;width:44px;height:44px;border-radius:50%;font-size:2rem;line-height:1;cursor:pointer;z-index:10000;';
+
+    const nextBtn = document.createElement('button');
+    nextBtn.innerHTML = '&#8250;';
+    nextBtn.setAttribute('aria-label', 'Next image');
+    nextBtn.style.cssText = 'position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);color:#fff;width:44px;height:44px;border-radius:50%;font-size:2rem;line-height:1;cursor:pointer;z-index:10000;';
+
+    function updateImage(nextIndex) {
+        currentIndex = (nextIndex + imageList.length) % imageList.length;
+        img.src = imageList[currentIndex];
+    }
+
+    function cleanupAndRemove() {
+        document.removeEventListener('keydown', onKey);
+        overlay.remove();
+    }
+
+    if (imageList.length <= 1) {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+    }
+
+    prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateImage(currentIndex - 1);
+    });
+    nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateImage(currentIndex + 1);
+    });
+
     overlay.appendChild(closeBtn);
+    overlay.appendChild(prevBtn);
+    overlay.appendChild(nextBtn);
     overlay.appendChild(img);
-    overlay.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', cleanupAndRemove);
     img.addEventListener('click', (e) => e.stopPropagation());
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cleanupAndRemove();
+    });
 
     document.body.appendChild(overlay);
 
     function onKey(e) {
         if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', onKey);
+            cleanupAndRemove();
+            return;
+        }
+        if (e.key === 'ArrowLeft') {
+            updateImage(currentIndex - 1);
+            return;
+        }
+        if (e.key === 'ArrowRight') {
+            updateImage(currentIndex + 1);
         }
     }
     document.addEventListener('keydown', onKey);
