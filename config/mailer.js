@@ -123,4 +123,80 @@ async function sendOrderConfirmation(orderData) {
     return info;
 }
 
-module.exports = { sendVerificationEmail, sendEnterpriseVerificationEmail, sendOrderConfirmation };
+function escapeEmailHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function resolveWholesaleInbox() {
+    const explicitInbox = String(
+        process.env.WHOLESALE_INBOX_EMAIL || process.env.WHOLESALE_APPLICATION_EMAIL || ''
+    ).trim();
+    if (explicitInbox) return explicitInbox;
+
+    const smtpFrom = String(process.env.SMTP_FROM || '').trim();
+    const smtpFromMatch = /<([^>]+)>/.exec(smtpFrom);
+    if (smtpFromMatch?.[1]) return smtpFromMatch[1].trim();
+    if (smtpFrom.includes('@')) return smtpFrom;
+
+    return '';
+}
+
+async function sendWholesaleInquiry(inquiry) {
+    const to = resolveWholesaleInbox();
+    if (!to) {
+        throw new Error('Wholesale inbox is not configured.');
+    }
+
+    const transport = await getTransporter();
+    const fullName = `${inquiry.firstName} ${inquiry.lastName}`.trim();
+    const lines = [
+        `Business name: ${inquiry.businessName}`,
+        `Contact name: ${fullName}`,
+        `Business email: ${inquiry.businessEmail}`,
+        `Website/Instagram: ${inquiry.websiteInstagram || '-'}`,
+        `Business type: ${inquiry.businessType}`,
+        `Shipping address: ${inquiry.shippingAddress}`,
+        `Estimated monthly order volume: ${inquiry.monthlyOrderVolume}`,
+        `Message: ${inquiry.message || '-'}`,
+    ];
+
+    const info = await transport.sendMail({
+        from: process.env.SMTP_FROM || '"Date&Crumb" <noreply@dateandcrumb.com>',
+        to,
+        replyTo: inquiry.businessEmail,
+        subject: `Wholesale inquiry — ${inquiry.businessName}`,
+        text: lines.join('\n'),
+        html: `
+            <div style="font-family: sans-serif; max-width: 640px; margin: 0 auto; padding: 1.25rem;">
+                <h2 style="margin-bottom: 1rem; color: #8b4513;">New wholesale inquiry</h2>
+                <p><strong>Business name:</strong> ${escapeEmailHtml(inquiry.businessName)}</p>
+                <p><strong>Contact name:</strong> ${escapeEmailHtml(fullName)}</p>
+                <p><strong>Business email:</strong> ${escapeEmailHtml(inquiry.businessEmail)}</p>
+                <p><strong>Website/Instagram:</strong> ${escapeEmailHtml(inquiry.websiteInstagram || '-')}</p>
+                <p><strong>Business type:</strong> ${escapeEmailHtml(inquiry.businessType)}</p>
+                <p><strong>Shipping address:</strong><br>${escapeEmailHtml(inquiry.shippingAddress).replace(/\n/g, '<br>')}</p>
+                <p><strong>Estimated monthly order volume:</strong> ${escapeEmailHtml(inquiry.monthlyOrderVolume)}</p>
+                <p><strong>Message:</strong><br>${escapeEmailHtml(inquiry.message || '-').replace(/\n/g, '<br>')}</p>
+            </div>
+        `,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) {
+        console.log('Wholesale inquiry preview URL:', previewUrl);
+    }
+
+    return info;
+}
+
+module.exports = {
+    sendVerificationEmail,
+    sendEnterpriseVerificationEmail,
+    sendOrderConfirmation,
+    sendWholesaleInquiry,
+};

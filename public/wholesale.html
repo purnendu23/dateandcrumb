@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wholesale — Date and Crumb</title>
+    <link rel="icon" type="image/png" href="/images/logo/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/images/logo/favicon.svg" />
+    <link rel="shortcut icon" href="/images/logo/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/logo/apple-touch-icon.png" />
+    <link rel="manifest" href="/images/logo/site.webmanifest" />
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-centered">
+            <a href="/" class="logo"><img src="/images/logo/dc_flat_logo.svg" alt="Date and Crumb"></a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/products.html">Products</a></li>
+                <li><a href="/our-story.html">Our Story</a></li>
+                <li><a href="/wholesale.html" class="active">Wholesale</a></li>
+                <li><a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="badge">0</span></a></li>
+                <li id="auth-nav"></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="section">
+            <div class="container">
+                <h1 class="section-title" style="margin-bottom:0.75rem;">Bring Date &amp; Crumb to your shelves</h1>
+                <p class="wholesale-lede">
+                    For retailers, caf&eacute;s, corporate offices, specialty food stores, fitness studios, hotels, and more.
+                </p>
+                <div class="auth-container wholesale-container">
+                    <h2 class="auth-title">Tell us about yourself</h2>
+                    <p class="auth-subtitle">We&apos;ll review your inquiry and follow up with wholesale details.</p>
+
+                    <div id="wholesale-error" class="auth-error" style="display:none;"></div>
+
+                    <form id="wholesale-form" class="auth-form">
+                        <div class="form-group">
+                            <label for="business-name">Business Name *</label>
+                            <input type="text" id="business-name" name="business-name" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="first-name">First Name *</label>
+                                <input type="text" id="first-name" name="first-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="last-name">Last Name *</label>
+                                <input type="text" id="last-name" name="last-name" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="business-email">Business Email *</label>
+                            <input type="email" id="business-email" name="business-email" required placeholder="you@business.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="website-instagram">Website / Instagram</label>
+                            <input type="text" id="website-instagram" name="website-instagram" placeholder="https://... or @...">
+                        </div>
+                        <div class="form-group">
+                            <label for="business-type">Business Type *</label>
+                            <select id="business-type" name="business-type" required>
+                                <option value="">Select one</option>
+                                <option value="Retailer">Retailer</option>
+                                <option value="Cafe">Caf&eacute;</option>
+                                <option value="Corporate Office">Corporate Office</option>
+                                <option value="Specialty Food Store">Specialty Food Store</option>
+                                <option value="Fitness Studio">Fitness Studio</option>
+                                <option value="Hotel">Hotel</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="shipping-address">Shipping Address *</label>
+                            <textarea id="shipping-address" name="shipping-address" required placeholder="Street, city, state, ZIP"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="monthly-volume">Estimated Monthly Order Volume *</label>
+                            <select id="monthly-volume" name="monthly-volume" required>
+                                <option value="">Select one</option>
+                                <option value="Under 50 units">Under 50 units</option>
+                                <option value="50-200 units">50-200 units</option>
+                                <option value="200-500 units">200-500 units</option>
+                                <option value="500+ units">500+ units</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Message</label>
+                            <textarea id="message" name="message" placeholder="Anything else you'd like to share?"></textarea>
+                        </div>
+                        <button type="submit" id="wholesale-submit" class="btn btn-primary btn-block">Submit Inquiry</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Date &amp; Crumb. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/cart.js"></script>
+    <script src="/js/auth-nav.js"></script>
+    <script>
+        const form = document.getElementById('wholesale-form');
+        const errorDiv = document.getElementById('wholesale-error');
+        const submitBtn = document.getElementById('wholesale-submit');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            const payload = {
+                business_name: document.getElementById('business-name').value.trim(),
+                first_name: document.getElementById('first-name').value.trim(),
+                last_name: document.getElementById('last-name').value.trim(),
+                business_email: document.getElementById('business-email').value.trim(),
+                website_instagram: document.getElementById('website-instagram').value.trim(),
+                business_type: document.getElementById('business-type').value,
+                shipping_address: document.getElementById('shipping-address').value.trim(),
+                monthly_order_volume: document.getElementById('monthly-volume').value,
+                message: document.getElementById('message').value.trim(),
+            };
+
+            try {
+                const res = await fetch('/api/wholesale/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'Unable to submit inquiry.');
+                }
+
+                document.querySelector('.auth-container').innerHTML = `
+                    <div style="text-align:center;">
+                        <h2 style="display:flex; align-items:center; justify-content:center; gap:0.5rem; color:var(--color-primary-dark); margin-bottom:0.5rem;">
+                            <img src="/images/logo/success-logo.png" alt="Success" style="height: 40px; width: auto;">
+                            Thank You
+                        </h2>
+                        <p style="color:var(--color-text-light); margin-top:0.75rem;">
+                            Our team will review your wholesale request and contact you within one business day.
+                        </p>
+                    </div>
+                `;
+            } catch (err) {
+                errorDiv.textContent = err.message || 'Something went wrong. Please try again.';
+                errorDiv.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Inquiry';
+            }
+        });
+    </script>
+</body>
+</html>

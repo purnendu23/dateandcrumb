@@ -88,6 +88,13 @@ Optional:
 - `EASYPOST_FROM_COMPANY`, `EASYPOST_FROM_PHONE`, `EASYPOST_FROM_ADDRESS2`, `EASYPOST_FROM_COUNTRY`
 - `EASYPOST_PARCEL_WEIGHT_OZ`, `EASYPOST_PARCEL_LENGTH_IN`, `EASYPOST_PARCEL_WIDTH_IN`, `EASYPOST_PARCEL_HEIGHT_IN`
 
+### Wholesale inquiry email
+
+`POST /api/wholesale/apply` sends wholesale form submissions via SMTP.
+
+- Set `WHOLESALE_INBOX_EMAIL` (or `WHOLESALE_APPLICATION_EMAIL`) to control where inquiries are sent.
+- If not set, the app falls back to the email address in `SMTP_FROM`.
+
 ## Database
 
 Database tables include:
